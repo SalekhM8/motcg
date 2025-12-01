@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="alert-box" id="alertBoxLoginFailure">
+            <span class="alert-icon">⚠️</span>
+            <span class="alert-message">No matching credentials found.</span>
+            <span class="close-btn" onclick="hideAlert()">✖</span>
+        </div>
+        <div class="success-box" id="successBoxLogin">
+            <span class="alert-icon">✅</span>
+            <span class="alert-message">Success . Redirecting you to login page now....</span>
+            <span class="close-btn" onclick="hideAlert()">✖</span>
+        </div>
+        <div class="success-box" id="successBoxForgotPassword">
+            <span class="alert-icon">✅</span>
+            <span class="alert-message">Reset Password Email Sent Successfully</span>
+            <span class="close-btn" onclick="hideAlert()">✖</span>
+        </div>
+        <h1>Login</h1>
+            <div class="input-group">
+                <input type="text" id="username" required>
+                <label for="username">Username</label>
+            </div>
+            <button class="data-launch-forgot-password" type="button" onclick="forgotPassword()">Forgot your password?</button>
+            <div class="input-group">
+                <input type="password" id="password" required>
+                <label for="password">Password</label>
+            </div>
+            <button type="submit" onclick="login()">Login</button>
+    </div>
+
+     <!-- Modal Overlay -->
+     <div class="modal-overlay" id="forgotPasswordModal">
+        <div class="modal">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div class="alert-box" id="alertBoxForgotPasswordFailure">
+                <span class="alert-icon">⚠️</span>
+                <span class="alert-message">No matching credentials found.</span>
+                <span class="close-btn" onclick="hideAlert()">✖</span>
+            </div>
+            <h2>Forgot Password?</h2>
+            <p>Enter your email address below to reset your password.</p>
+            <input type="email" placeholder="Enter your email" id="emailInput">
+            <button onclick="submitEmail()">Submit</button>
+        </div>
+    </div>
+    <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <script src="./script.js"></script>    
+    <script src="./login.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+      .tester-record-associated-garages-modal-popup {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Modal Content */
+        .tester-record-associated-garages-modal-content {
+            background-color: #f9f9f9;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: slide-down 0.3s ease-out;
+        }
+
+        @keyframes slide-down {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Close Button */
+        .tester-record-associated-garages-close {
+            color: #bbb;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .tester-record-associated-garages-close:hover,
+        .tester-record-associated-garages-close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        /* Header */
+        .tester-record-associated-garages-header {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Search Input */
+        .tester-record-associated-garages-search-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* Table */
+        .tester-record-associated-garages-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .tester-record-associated-garages-table th,
+        .tester-record-associated-garages-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .tester-record-associated-garages-table th {
+            background-color: #f4f4f4;
+            color: #555;
+        }
+
+        .tester-record-associated-garages-table tr:hover {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+
+        .tester-record-associated-garages-selected {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* OK Button */
+        .tester-record-associated-garages-ok-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .tester-record-associated-garages-ok-button:hover {
+            background-color: #218838;
+        }

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic Operating Hours Calendar (with Bay Header Offset)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    /* Calendar container height will be set dynamically via script. */
+    .calendar-container {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      position: relative;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+    /* Left time column */
+    .time-column {
+      position: relative;
+      border-right: 1px solid #ddd;
+    }
+    .time-header {
+      height: 30px;
+      border-bottom: 1px solid #ddd;
+    }
+    .time-marker {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 1px solid #eee;
+      font-size: 10px;
+      padding-left: 2px;
+      color: #555;
+    }
+    /* Right days area */
+    .days-columns {
+      display: flex;
+      width: 100%;
+    }
+    .day-column {
+      flex: 1;
+      border-right: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+    }
+    .day-header {
+      text-align: center;
+      background: #0068B5;
+      color: #fff;
+      height: 30px;
+      line-height: 30px;
+      font-size: 12px;
+    }
+    /* The bays-container height will be set dynamically. */
+    .bays-container {
+      display: flex;
+      position: relative;
+    }
+    /* Each bay – add top padding to reserve space for the bay header */
+    .bay {
+      flex: 1;
+      border-left: 1px solid #ddd;
+      position: relative;
+      overflow: visible;
+      /* Reserve space for the bay header */
+      padding-top: 20px;
+    }
+    .bay-header {
+      text-align: center;
+      background: #eee;
+      font-size: 10px;
+      padding: 2px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 2;
+    }
+    .bay::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .bay.dragover {
+      background: rgba(0,104,181,0.1);
+    }
+    /* Hover time indicator */
+    .hover-time {
+      position: absolute;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10px;
+      background: rgba(255,255,0,0.7);
+      border: 1px solid #ccc;
+      z-index: 50;
+      pointer-events: none;
+      padding: 2px;
+    }
+    /* Event styling */
+    .event {
+      position: absolute;
+      background: rgba(0,104,181,0.9);
+      color: #fff;
+      padding: 2px;
+      font-size: 10px;
+      border-radius: 3px;
+      cursor: grab;
+      z-index: 3;
+    }
+    .event:active {
+      cursor: grabbing;
+    }
+    /* Tooltip styling */
+    .event .tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 8px;
+      font-size: 12px;
+      border-radius: 3px;
+      white-space: normal;
+      min-width: 150px;
+      max-width: 300px;
+      text-align: left;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease-in-out;
+      margin-bottom: 6px;
+      z-index: 100;
+    }
+    .event:hover .tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    /* Event segment classes – height controlled by CSS */
+    .event.event-20 {
+      height: 20px;
+      font-size: 8px;
+      padding: 1px;
+    }
+    .event.event-30 {
+      height: 30px;
+      font-size: 9px;
+      padding: 2px;
+    }
+    .event.event-45 {
+      height: 45px;
+      font-size: 10px;
+      padding: 2px;
+    }
+    .event.event-60 {
+      height: 60px;
+      font-size: 10px;
+      padding: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Dynamic Garage Booking Calendar</h2>
+  <div class="calendar-container" id="calendarContainer">
+    <!-- Left time column -->
+    <div class="time-column" id="timeColumn">
+      <div class="time-header"></div>
+      <!-- Time markers injected dynamically -->
+    </div>
+    <!-- Right days area -->
+    <div class="days-columns" id="daysColumns">
+      <!-- Day columns built dynamically -->
+    </div>
+  </div>
+
+  <script>
+    // ===== CONFIGURATION: OPERATING HOURS =====
+    // Specify operating start and finish (in minutes from midnight).
+    const operatingStart = 8 * 60;     // e.g., 08:00
+    const operatingFinish = 18 * 60;   // e.g., 18:00
+    const operatingDuration = operatingFinish - operatingStart;
+    // We'll reserve space at the top of each bay for its header.
+    const BAY_HEADER_HEIGHT = 20;
+
+    // Set calendar container height = operatingDuration + header (30px)
+    document.getElementById("calendarContainer").style.height = (operatingDuration + 30) + "px";
+
+    // ===== HELPER FUNCTIONS =====
+    // Format minutes (integer, multiple of 5) into HH:MM.
+    function formatTime(totalMinutes) {
+      totalMinutes = Math.round(totalMinutes);
+      let hours = Math.floor(totalMinutes / 60);
+      let minutes = totalMinutes % 60;
+      return (hours < 10 ? "0" + hours : hours) + ":" + (minutes < 10 ? "0" + minutes : minutes);
+    }
+
+    // Constant offset for drop alignment.
+    const DROP_OFFSET = 5;
+
+    // Layout overlapping events side by side in a bay.
+    function layoutBay(bay) {
+      const events = Array.from(bay.querySelectorAll('.event'));
+      let eventInfos = events.map(event => {
+        let start = parseInt(event.style.top);
+        let end = start + event.offsetHeight;
+        return { element: event, start: start, end: end, col: 0, totalCols: 1 };
+      });
+      eventInfos.sort((a, b) => a.start - b.start);
+      let active = [];
+      for (let info of eventInfos) {
+        active = active.filter(e => e.end > info.start);
+        let usedCols = active.map(e => e.col);
+        let col = 0;
+        while (usedCols.includes(col)) { col++; }
+        info.col = col;
+        active.push(info);
+        let groupSize = active.length;
+        for (let e of active) {
+          e.totalCols = groupSize;
+        }
+      }
+      eventInfos.forEach(info => {
+        let widthPercent = 100 / info.totalCols;
+        info.element.style.width = widthPercent + "%";
+        info.element.style.left = (info.col * widthPercent) + "%";
+      });
+    }
+
+    // ===== BUILD LEFT TIME MARKERS =====
+    const timeColumn = document.getElementById("timeColumn");
+    const timeHeaderHeight = 30; // Matches .time-header and .day-header
+    for (let t = operatingStart; t <= operatingFinish; t += 60) {
+      const marker = document.createElement("div");
+      marker.className = "time-marker";
+      // Marker position is relative to operatingStart.
+      marker.style.top = (timeHeaderHeight + (t - operatingStart)) + "px";
+      marker.innerText = formatTime(t);
+      timeColumn.appendChild(marker);
+    }
+
+    // ===== BUILD DAY COLUMNS =====
+    const daysData = [
+      { day: "Monday", bays: [
+          { name: "Bay 1", increment: 20 },
+          { name: "Bay 2", increment: 30 },
+          { name: "Bay 3", increment: 60 }
+        ]
+      },
+      { day: "Tuesday", bays: [
+          { name: "Bay 1", increment: 45 },
+          { name: "Bay 2", increment: 60 }
+        ]
+      },
+      { day: "Wednesday", bays: [
+          { name: "Bay 1", increment: 30 },
+          { name: "Bay 2", increment: 30 },
+          { name: "Bay 3", increment: 60 },
+          { name: "Bay 4", increment: 60 }
+        ]
+      },
+      { day: "Thursday", bays: [
+          { name: "Bay 1", increment: 60 }
+        ]
+      },
+      { day: "Friday", bays: [
+          { name: "Bay 1", increment: 20 },
+          { name: "Bay 2", increment: 20 }
+        ]
+      },
+      { day: "Saturday", bays: [
+          { name: "Bay 1", increment: 30 }
+        ]
+      },
+      { day: "Sunday", bays: [
+          { name: "Bay 1", increment: 60 },
+          { name: "Bay 2", increment: 45 }
+        ]
+      }
+    ];
+
+    const daysColumns = document.getElementById("daysColumns");
+    daysData.forEach(dayData => {
+      const dayCol = document.createElement("div");
+      dayCol.className = "day-column";
+      const dayHeader = document.createElement("div");
+      dayHeader.className = "day-header";
+      dayHeader.innerText = dayData.day;
+      dayCol.appendChild(dayHeader);
+
+      const baysContainer = document.createElement("div");
+      baysContainer.className = "bays-container";
+      // Set container height to operatingDuration.
+      baysContainer.style.height = operatingDuration + "px";
+
+      dayData.bays.forEach(bayData => {
+        const bay = document.createElement("div");
+        bay.className = "bay";
+        bay.setAttribute("data-increment", bayData.increment);
+        bay.style.backgroundImage = "linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)";
+        bay.style.backgroundSize = `100% ${bayData.increment}px`;
+
+        const bayHeader = document.createElement("div");
+        bayHeader.className = "bay-header";
+        bayHeader.innerText = bayData.name;
+        bay.appendChild(bayHeader);
+
+        // Drop zone and hover feedback.
+        bay.addEventListener("dragover", function(e) {
+          e.preventDefault();
+          bay.classList.add("dragover");
+          const rect = bay.getBoundingClientRect();
+          // Calculate predicted drop position (subtract bay header height).
+          let predictedTop = e.clientY - rect.top - dragOffsetY + DROP_OFFSET;
+          if (predictedTop < BAY_HEADER_HEIGHT) predictedTop = BAY_HEADER_HEIGHT;
+          let roundedTop = Math.round((predictedTop - BAY_HEADER_HEIGHT) / 5) * 5;
+          // The absolute time = roundedTop + operatingStart.
+          let hoverTime = formatTime(roundedTop + operatingStart);
+          let hoverIndicator = bay.querySelector(".hover-time");
+          if (!hoverIndicator) {
+            hoverIndicator = document.createElement("div");
+            hoverIndicator.className = "hover-time";
+            bay.appendChild(hoverIndicator);
+          }
+          hoverIndicator.innerText = hoverTime;
+          // Position the indicator relative to the padded area.
+          hoverIndicator.style.top = (roundedTop + BAY_HEADER_HEIGHT) + "px";
+        });
+
+        bay.addEventListener("dragleave", function(e) {
+          bay.classList.remove("dragover");
+          let hoverIndicator = bay.querySelector(".hover-time");
+          if (hoverIndicator) hoverIndicator.remove();
+        });
+
+        bay.addEventListener("drop", function(e) {
+          e.preventDefault();
+          bay.classList.remove("dragover");
+          let hoverIndicator = bay.querySelector(".hover-time");
+          if (hoverIndicator) hoverIndicator.remove();
+          dropEvent(e, bay);
+        });
+
+        baysContainer.appendChild(bay);
+      });
+
+      dayCol.appendChild(baysContainer);
+      daysColumns.appendChild(dayCol);
+    });
+
+    // ===== DRAG AND DROP HANDLING =====
+    let dragEventElem = null;
+    let dragOffsetY = 0;
+    let sourceBay = null;
+
+    function onDragStart(e) {
+      dragEventElem = e.target;
+      sourceBay = dragEventElem.parentElement;
+      dragOffsetY = e.offsetY;
+      let tooltip = dragEventElem.querySelector('.tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+      const ghost = new Image();
+      ghost.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+      e.dataTransfer.setDragImage(ghost, 0, 0);
+      e.dataTransfer.setData("text/plain", "dummy");
+    }
+
+    function dropEvent(e, targetBay) {
+      if (!dragEventElem) return;
+      const rect = targetBay.getBoundingClientRect();
+      const dropY = e.clientY - rect.top;
+      let newTop = dropY - dragOffsetY + DROP_OFFSET;
+      if (newTop < BAY_HEADER_HEIGHT) newTop = BAY_HEADER_HEIGHT;
+      if (newTop + dragEventElem.offsetHeight > targetBay.clientHeight + BAY_HEADER_HEIGHT) {
+        newTop = targetBay.clientHeight + BAY_HEADER_HEIGHT - dragEventElem.offsetHeight;
+      }
+      dragEventElem.style.top = newTop + "px";
+      targetBay.appendChild(dragEventElem);
+
+      let tooltip = dragEventElem.querySelector('.tooltip');
+      if (tooltip) tooltip.style.display = '';
+
+      // Compute absolute new booking time.
+      let relativeTime = newTop - BAY_HEADER_HEIGHT;
+      let newTime = Math.round(relativeTime / 5) * 5 + operatingStart;
+      let timeStr = formatTime(newTime);
+
+      const duration = Number(dragEventElem.dataset.duration);
+      dragEventElem.dataset.start = newTime;
+      tooltip.innerHTML = "Time: " + formatTime(newTime) + " - " + formatTime(newTime + duration) +
+                          "<br>" + dragEventElem.dataset.metadata;
+
+      if (sourceBay && sourceBay !== targetBay) layoutBay(sourceBay);
+      layoutBay(targetBay);
+
+      setTimeout(() => {
+        alert("Booking moved to " + timeStr + "\nDetails:\n" + tooltip.innerHTML);
+      }, 0);
+
+      dragEventElem = null;
+      sourceBay = null;
+    }
+
+    // ===== TOOLTIP METADATA HELPER =====
+    function getRandomMetadata(bayName) {
+      const customers = ["John Doe", "Jane Smith", "Mike Johnson", "Emily Davis"];
+      const services = ["MOT Inspection", "Oil Change", "Tire Replacement", "Brake Check"];
+      const vehicles = ["Toyota Camry", "Honda Civic", "Ford Focus", "Chevrolet Malibu"];
+      const licensePlates = ["ABC-123", "XYZ-789", "LMN-456", "DEF-321"];
+      const customer = customers[Math.floor(Math.random() * customers.length)];
+      const service = services[Math.floor(Math.random() * services.length)];
+      const vehicle = vehicles[Math.floor(Math.random() * vehicles.length)];
+      const plate = licensePlates[Math.floor(Math.random() * licensePlates.length)];
+      return `Customer: ${customer}<br>Service: ${service}<br>Vehicle: ${vehicle}<br>Plate: ${plate}<br>Bay: ${bayName}`;
+    }
+
+    // ===== CREATE EVENT FUNCTION =====
+    function createEvent(dayName, bayName, startMinute, duration, text) {
+      const dayCol = Array.from(document.getElementsByClassName("day-column"))
+                         .find(dc => dc.querySelector(".day-header").innerText === dayName);
+      if (!dayCol) return;
+      const bay = Array.from(dayCol.getElementsByClassName("bay"))
+                      .find(b => b.querySelector(".bay-header").innerText === bayName);
+      if (!bay) return;
+      const eventElem = document.createElement("div");
+      eventElem.className = "event";
+      eventElem.innerText = text;
+      // Position relative to the padded area:
+      eventElem.style.top = (startMinute - operatingStart + BAY_HEADER_HEIGHT) + "px";
+      if (duration === 20) {
+        eventElem.classList.add("event-20");
+      } else if (duration === 30) {
+        eventElem.classList.add("event-30");
+      } else if (duration === 45) {
+        eventElem.classList.add("event-45");
+      } else if (duration === 60) {
+        eventElem.classList.add("event-60");
+      }
+      // Store duration, absolute start time, and metadata.
+      eventElem.dataset.duration = duration;
+      eventElem.dataset.start = startMinute;
+      eventElem.dataset.metadata = getRandomMetadata(bayName);
+      eventElem.setAttribute("draggable", "true");
+      eventElem.addEventListener("dragstart", onDragStart);
+      const tooltip = document.createElement("div");
+      tooltip.className = "tooltip";
+      tooltip.innerHTML = "Time: " + formatTime(startMinute) + " - " + formatTime(startMinute + duration) +
+                          "<br>" + eventElem.dataset.metadata;
+      eventElem.appendChild(tooltip);
+      bay.appendChild(eventElem);
+      layoutBay(bay);
+    }
+
+    // ===== SAMPLE EVENTS =====
+    createEvent("Monday", "Bay 1", 9 * 60, 20, "M1 Event");       // 09:00
+    createEvent("Monday", "Bay 2", 10 * 60, 30, "M2 Event");      // 10:00
+    createEvent("Monday", "Bay 3", 14 * 60, 60, "M3 Event");      // 14:00
+    createEvent("Tuesday", "Bay 1", 11 * 60, 45, "T1 Event");     // 11:00
+    createEvent("Tuesday", "Bay 2", 15 * 60, 60, "T2 Event");     // 15:00
+    createEvent("Wednesday", "Bay 1", 8 * 60, 30, "W1 Event");    // 08:00
+    createEvent("Wednesday", "Bay 2", 12 * 60, 30, "W2 Event");   // 12:00
+    createEvent("Wednesday", "Bay 3", 16 * 60, 60, "W3 Event");   // 16:00
+    createEvent("Wednesday", "Bay 4", 10 * 60, 60, "W4 Event");   // 10:00
+    createEvent("Friday", "Bay 1", 9 * 60, 20, "F1 Event");       // 09:00
+    createEvent("Friday", "Bay 2", 11 * 60, 20, "F2 Event");      // 11:00
+    createEvent("Sunday", "Bay 1", 13 * 60, 60, "Su1 Event");     // 13:00
+    createEvent("Sunday", "Bay 2", 17 * 60, 45, "Su2 Event");     // 17:00
+  </script>
+</body>
+</html>

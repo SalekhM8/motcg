@@ -1,0 +1,234 @@
+      .garage-record-associated-testers-modal-popup {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Modal Content */
+        .garage-record-associated-testers-modal-content {
+            background-color: #f9f9f9;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: slide-down 0.3s ease-out;
+        }
+
+        @keyframes slide-down {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Close Button */
+        .garage-record-associated-testers-close {
+            color: #bbb;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .garage-record-associated-testers-close:hover,
+        .garage-record-associated-testers-close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        /* Header */
+        .garage-record-associated-testers-header {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Search Input */
+        .garage-record-associated-testers-search-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* Table */
+        .garage-record-associated-testers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .garage-record-associated-testers-table th,
+        .garage-record-associated-testers-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .garage-record-associated-testers-table th {
+            background-color: #f4f4f4;
+            color: #555;
+        }
+
+        .garage-record-associated-testers-table tr:hover {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+
+        .garage-record-associated-testers-selected {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* OK Button */
+        .garage-record-associated-testers-ok-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            color: white;
+            background-color: #1abc9c;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .garage-record-associated-testers-ok-button:hover {
+            background-color: #218838;
+        }
+
+        .garages-document-upload-popup-window {
+            display: none;
+            position: fixed;
+            top: 60%;
+            left: 38%;
+            width: 493px;
+            height: 145px;
+            z-index: 99999;
+        }
+        .garages-document-upload-popup-window.active {
+            display: block;
+        }
+        .garages-mot-calibration-large-image-preview-window {
+            height: 400px;
+            width: 400px;
+            position: fixed;
+            top: 1%;
+            left: 1%;
+            z-index: 99999;
+            display: block;
+        }
+        .garage-screen-overlay {
+            height: 100vh;
+            width: 100vw;
+            background-color: #554447;
+            z-index: 99998;
+            position: fixed;
+            top: 0px;
+            left: 0px;
+        }
+        .garages-mot-calibration-download-image {
+            height: 80px;
+            width: 300px;
+            font-size: 26px;
+        }
+
+        .garages-mot-calibration-image-preview-window-close-button {
+            position: absolute;
+            left: 326px;
+            height: 80px;
+            width: 300px;
+            font-size: 26px;
+        }
+       
+        .garages-mot-calibration-images-preview {
+            height: 100%;
+        }
+
+        .garage-mot-calibration-new-document-window-v2-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding-left: 45vw;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            padding-top: 30vh;
+          }
+      
+          .garage-mot-calibration-new-document-window-v2-modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            text-align: center;
+            position: absolute;
+          }
+      
+          .garage-mot-calibration-new-document-window-v2-modal-content h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: #333;
+          }
+      
+          .garage-mot-calibration-new-document-window-v2-modal-content button {
+            padding: 10px 15px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #0068B5; /* Button color */
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+          }
+      
+          .garage-mot-calibration-new-document-window-v2-modal-content button:hover {
+            background-color: #004a8f;
+          }
+      
+      
+          .garage-mot-calibration-new-document-window-v2-open-btn {
+            padding: 10px 20px;
+            background-color: #0068B5;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+          }
+          
+          .garage-mot-calibration-new-document-window-v2-modal-content .garage-mot-calibration-new-document-window-v2-close-button {
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            float: left;
+            font-size: 10px;
+            background-color: darkred;
+          }
+          .garages-mot-calibration-images-filename {
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            color: white;
+          }
+   

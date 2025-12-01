@@ -1,0 +1,370 @@
+/* .data-launch-field-container {
+    padding-bottom: 20px;
+} */
+/* .data-launch-input-field-container{
+    padding: 5px 10px;
+    height: 34px;
+    /* background-color: #F7F9FA; */
+    /* margin-top: 16px;
+    border-radius: 5px;
+    width: 90%;
+    position: relative;
+    left: 2%;
+} */
+/* .data-launch-input-field-container-checkbox{
+    padding: 10px 10px;
+    height: 49px;
+}
+.data-launch-input-field-container-multi-line {
+    height: 160px;
+    border-bottom: 1px solid gray;
+}
+.data-launch-input-field {
+    width: 63%;
+    font-size: 14px;
+    display: inline-block;
+    border: none;
+    font-weight: bold;
+    background-color: #F7F9FA;
+    cursor: pointer;
+}
+.data-launch-input-field::placeholder {
+    font-weight: 400;    
+}
+.data-launch-input-field:hover {
+    border: 0.1px solid wheat;
+    border-radius: 7.5px;
+    padding: 0px 0px 0px 10px;
+}
+.data-launch-input-field-checkbox {
+    width: 10%;
+    position: relative;
+}
+.data-launch-input-field-multi-line {
+    width: 95%;
+    font-size: 14px;
+    display: inline-block;
+    font-weight: bold;
+    height: 90px;
+    border: none;
+    border-radius: 7.5px;
+    position: relative;
+    left: 2px;
+    padding: 6px 6px;
+    background-color: #F7F9FA;
+}
+.data-launch-field-labels {
+    font-size: 14px;
+    padding-left: 4px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    position: relative;
+    width: 35%;
+    color: #333333;
+} */
+.data-launch-field-labels-large-width {
+    width: 65%;
+}
+.data-launch-testing-stations-screen {
+  display: none;
+  position: relative;
+  top: 25px;
+  left: 26px;
+  width: 98%;
+  border-radius: 0px;
+}
+.active {
+    display: flex;
+}
+.data-launch-form-tabs-container {
+    color: white;
+    background-color: #0068B5;
+    border-radius: 6px;
+    width: 97%;
+}
+.data-launch-form-tabs-container-row {
+    margin-left: -5px;
+    background-color: #0068B5;
+    border-radius: 4.5px;
+    width: 99.9%;
+}
+.data-launch-tabs-clickable-testing-station {
+    color: #fff3cd !important;
+    letter-spacing: 1.7px;
+    font-weight: 600;
+}
+.data-launch-tabs-clickable-testers {
+    color: #fff3cd !important;
+    letter-spacing: 1.7px;
+    font-weight: 600;
+}
+.data-launch-promote-to-garage {
+    top: 1px;
+    width: 300px;
+    background-color: #5CB85C;
+    color: white;
+    opacity: 1;
+    z-index: 999;
+    font-size: 22px;
+    height: 40px;
+}
+.data-launch-testing-station-promote-garage-confirmation-box-header {
+    margin-top: 14px;
+    margin-bottom: 20px;
+}
+.data-launch-confirmation-box-inject {
+    position: fixed;
+    top:0px;
+    left: 0px;
+    background-color: grey;
+    z-index: 9999;
+    height: 100vh;
+    width: 100vw;
+}
+.data-launch-save-close-record {
+    position: fixed;
+    bottom: 10px;
+    width: 38%;
+    left: 55%;
+    background-color: #f39c12;
+    color: black;
+    opacity: 1;
+    z-index: 999;
+    font-size: 24px;
+    display: inline-block;
+}
+.data-launch-saved-record-banner-alert {
+    height: 150px;
+    background-color: green;
+    z-index: 9999;
+    position: fixed;
+    top: 48px;
+    left: 0px;
+    width: 100vw;
+    display: none;
+    text-align: center;
+    padding-top: 70px;
+    color: white;
+    text-transform: capitalize;
+    font-size: 30px;
+    opacity: 1;
+}
+.data-launch-saved-record-banner-alert.active {
+   display: block;
+}
+.data-launch-save-record {
+    position: fixed;
+    bottom: 10px;
+    width: 38%;
+    left: 5%;
+    background-color: #1abc9c;
+    color: #ffffff;
+    opacity: 1;
+    z-index: 999;
+    font-size: 24px;
+    display: inline-block;
+}
+.data-launch-record-header {
+    padding-left: 22px;
+    color: #0068B5;
+}
+/* .data-launch-list-button-headers {
+    width: 85%;
+    display: inline-block;
+    margin-left: 7.4%;
+    height: 44px;
+    background-color: #8fc88f !important;
+    color: #274ba8 !important;
+} */
+.data-launch-list-page-header {
+    padding-left: 40px;
+    font-weight: 100;
+}
+
+
+/* Primary button styles */
+.btn-primary {
+    background-color: #007bff;
+    border: 2px solid #007bff;
+    color: white;
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+/* Hover styles */
+.btn-primary:hover {
+  border-color: #0056b3;
+  color: #212529;
+  transform: scale(1.05);
+  background-color: #45a049;
+}
+
+/* Active styles */
+.btn-primary:active,
+.btn-primary.active {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    color: white;
+    transform: scale(1);
+}
+
+/* Focus styles */
+.btn-primary:focus,
+.btn-primary.focus {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.5);
+}
+
+.testing-station-list-view-open-garage-record {
+    cursor: pointer;
+}
+.data-launch-testing-station-promote-garage-confirmation-box {
+    width: 516px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    padding: 30px 30px 3px 30px;
+    font-family: Arial, sans-serif;
+    text-align: centre;
+    z-index: 9999;
+    position: relative;
+    top: 25vh;
+    left: 34%;
+  }
+  
+  
+  .data-launch-testing-station-promote-garage-confirmation-box-actions {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .data-launch-testing-station-promote-garage-confirmation-box-approve-btn,
+  .data-launch-testing-station-promote-garage-confirmation-box-cancel-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .data-launch-testing-station-promote-garage-confirmation-box-approve-btn {
+    background-color: #4dc051;
+    color: #fff;
+    width: 49%;
+  }
+  
+  .data-launch-testing-station-promote-garage-confirmation-box-cancel-btn {
+    background-color: #ff4d40;
+    color: #fff;
+    width: 49%;
+  }
+  
+  .data-launch-testing-station-promote-garage-confirmation-box-header p {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    color: #444;
+    line-height: 1.5;
+    text-align: center;
+  }
+  
+  .data-launch-testing-station-promote-garage-confirmation-box-header strong {
+    font-weight: bold;
+    color: #000;
+  }
+
+
+
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ff0077, #ff7700, #ffd700);
+    pointer-events: none;
+}
+
+  #animation-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999999; /* Highest possible z-index to ensure nothing hides it */
+    overflow: hidden;
+  }
+  
+ .data-launch-newly-promoted-firework-destination {
+    width: 44px;
+    height: 5px;
+    position: relative;
+    top: 13px;
+    left: 10px;
+ }
+  
+  .firework {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: radial-gradient(circle, #ff0077, #ff7700, #ffd700);
+    border-radius: 50%;
+    animation: firework-spiral 2.5s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    pointer-events: none;
+  }
+  
+  @keyframes firework-spiral {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translate(calc(50vw - 5px), calc(50vh - 5px)) scale(1.5);
+      opacity: 0.8;
+    }
+    100% {
+      transform: translate(var(--target-x), var(--target-y)) scale(1);
+      opacity: 0.9;
+    }
+  }
+  
+  .firework-trail {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    animation: trail-animation 2.5s linear forwards;
+    pointer-events: none;
+  }
+  
+  @keyframes trail-animation {
+    0% {
+      transform: translate(0, 0);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--target-x), var(--target-y));
+      opacity: 0;
+    }
+  }
+  
+  .firework,
+  .firework-trail {
+    position: absolute;
+    z-index: 99999; /* Reinforce the priority for the firework elements */
+  }
+
+
+  .data-launch-testing-station-global-filter-input {
+    background-image: url('/css/searchicon.png'); /* Add a search icon to input */
+    background-position: 10px 12px; /* Position the search icon */
+    background-repeat: no-repeat; /* Do not repeat the icon image */
+    width: 100%; /* Full-width */
+    font-size: 16px; /* Increase font-size */
+    padding: 12px 20px 12px 40px; /* Add some padding */
+    border: 1px solid #ddd; /* Add a grey border */
+    margin-bottom: 12px; /* Add some space below the input */
+  }

@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vemco Example</title>
+  <meta name="description" content="A clean, modern landing page template you can drop into any project." />
+  <style>
+    /* ==========================
+       THEME
+       Change these variables to rebrand quickly
+       ========================== */
+    :root {
+      --brand: #0068B5;           /* Primary brand color */
+      --brand-ink: #0a2a44;       /* Darker brand for text accents */
+      --text: #0f172a;            /* Slate-900 */
+      --muted: #475569;           /* Slate-600 */
+      --bg: #ffffff;              /* Page background */
+      --surface: #ffffff;         /* Card/nav background */
+      --border: #e2e8f0;          /* Slate-200 */
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.10);
+      --radius: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: #e5e7eb;          /* Gray-200 */
+        --muted: #94a3b8;         /* Slate-400 */
+        --bg: #0b1020;
+        --surface: #0f152a;
+        --border: #1f2a44;
+        --shadow: 0 10px 30px rgba(0,0,0,0.4);
+      }
+    }
+
+    /* Reset-ish */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    .container { width: min(1200px, 100% - 2rem); margin-inline: auto; }
+
+    /* ==========================
+       NAVBAR
+       ========================== */
+    .nav-wrap { position: sticky; top: 0; z-index: 40; backdrop-filter: saturate(180%) blur(10px); background: color-mix(in oklab, var(--surface) 85%, transparent); border-bottom: 1px solid var(--border); }
+    .nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; }
+    .brand { display: inline-flex; align-items: center; gap: .6rem; font-weight: 700; letter-spacing: .2px; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), color-mix(in oklab, var(--brand) 70%, white)); box-shadow: var(--shadow); display: grid; place-items: center; }
+    .brand svg { width: 18px; height: 18px; color: #fff; }
+
+    .nav-items { display: flex; align-items: center; gap: 1.2rem; }
+    .nav-items a { color: var(--muted); font-weight: 600; padding: .5rem .4rem; border-radius: 10px; transition: color .2s ease, background .2s ease; }
+    .nav-items a:hover, .nav-items a:focus-visible { color: var(--text); background: color-mix(in oklab, var(--brand) 12%, transparent); }
+
+    .nav-cta { display: flex; align-items: center; gap: .6rem; }
+    .btn { display: inline-flex; align-items: center; gap: .6rem; padding: .7rem 1rem; border-radius: 100px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 700; box-shadow: 0 1px 0 rgba(0,0,0,.04); transition: transform .08s ease, background .2s ease, border-color .2s ease; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: linear-gradient(135deg, var(--brand), color-mix(in oklab, var(--brand) 70%, white)); color: #fff; border-color: transparent; }
+
+    /* Mobile nav */
+    #nav-toggle { display: none; }
+    .hamburger { display: none; background: transparent; border: 0; width: 44px; height: 44px; border-radius: 8px; color: var(--text); }
+    .hamburger svg { width: 24px; height: 24px; }
+
+    @media (max-width: 900px) {
+      .nav-items { position: fixed; inset: 66px 0 auto 0; background: var(--surface); border-bottom: 1px solid var(--border); display: grid; gap: .2rem; padding: .6rem 1rem 1rem; max-height: 0; overflow: hidden; transition: max-height .25s ease; }
+      .nav-items.open { max-height: 320px; }
+      .hamburger { display: inline-grid; place-items: center; }
+    }
+
+    /* ==========================
+       HERO
+       ========================== */
+    .hero { position: relative; overflow: clip; }
+    .hero-surface { padding: clamp(3rem, 5vw + 2rem, 7rem) 0; background:
+      radial-gradient(80% 60% at 20% -10%, color-mix(in oklab, var(--brand) 18%, transparent) 0%, transparent 70%),
+      radial-gradient(70% 55% at 120% -20%, color-mix(in oklab, var(--brand) 26%, transparent) 0%, transparent 70%);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero .container { display: grid; grid-template-columns: 1.1fr 0.9fr; align-items: center; gap: clamp(1.5rem, 3vw, 3rem); }
+    .eyebrow { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; font-size: .88rem; color: var(--brand-ink); background: color-mix(in oklab, var(--brand) 14%, transparent); border: 1px solid color-mix(in oklab, var(--brand) 34%, var(--border)); padding: .4rem .7rem; border-radius: 999px; }
+    h1 { font-size: clamp(2.2rem, 1.2rem + 3vw, 3.6rem); line-height: 1.05; margin: .8rem 0 1rem; letter-spacing: -0.02em; }
+    .lede { font-size: clamp(1.02rem, .9rem + .5vw, 1.2rem); color: var(--muted); max-width: 60ch; }
+    .hero-cta { margin-top: 1.2rem; display: flex; gap: .8rem; flex-wrap: wrap; }
+
+    .device { aspect-ratio: 16/10; background: linear-gradient(180deg, #101626, #0b1020); border: 1px solid #1c2540; border-radius: calc(var(--radius) + 6px); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .device::before { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 40% at 60% -20%, rgba(255,255,255,.18), transparent 60%); }
+    .device-strip { position: absolute; inset: auto 0 0; height: 42%; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 60%); border-top: 1px solid rgba(255,255,255,.08); display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; }
+    .panel { padding: 1rem; }
+    .panel h4 { margin: 0 0 .6rem; font-size: .95rem; color: #cbd5e1; }
+    .panel .chip { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; padding: .3rem .6rem; border-radius: 999px; background: rgba(255,255,255,.06); color: #e2e8f0; border: 1px solid rgba(255,255,255,.12); }
+
+    @media (max-width: 900px) {
+      .hero .container { grid-template-columns: 1fr; }
+    }
+
+    /* ==========================
+       FEATURES
+       ========================== */
+    .section { padding: clamp(2.5rem, 5vw + 1rem, 4.5rem) 0; }
+    .section h2 { font-size: clamp(1.6rem, 1.2rem + 1.2vw, 2.2rem); margin: 0 0 1rem; }
+    .kicker { color: var(--muted); margin-bottom: 2rem; max-width: 70ch; }
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+    .card { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius); padding: 1.2rem; box-shadow: var(--shadow); display: grid; gap: .6rem; transition: transform .12s ease, border-color .2s ease; }
+    .card:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--brand) 40%, var(--border)); }
+    .icon { width: 40px; height: 40px; border-radius: 10px; background: color-mix(in oklab, var(--brand) 18%, transparent); display: grid; place-items: center; }
+    .icon svg { width: 20px; height: 20px; color: var(--brand); }
+    .card p { color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .features { grid-template-columns: 1fr; }
+    }
+
+    /* ==========================
+       STATS STRIP
+       ========================== */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; }
+    .stat { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 1rem; text-align: center; }
+    .stat .num { font-size: clamp(1.4rem, .8rem + 2vw, 2rem); font-weight: 800; color: var(--brand-ink); }
+    .stat .label { color: var(--muted); font-weight: 600; }
+    @media (max-width: 900px) { .stats { grid-template-columns: repeat(2, 1fr);} }
+
+    /* ==========================
+       FOOTER
+       ========================== */
+    footer { border-top: 1px solid var(--border); padding: 2.2rem 0; margin-top: 2rem; }
+    .foot { display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: center; }
+    .foot a { color: var(--muted); font-weight: 600; }
+    .foot .links { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+    /* Fancy focus for keyboard users */
+    :focus-visible { outline: 3px solid color-mix(in oklab, var(--brand) 44%, white); outline-offset: 2px; border-radius: 8px; }
+
+    /* Utility */
+    .mt-1 { margin-top: .25rem; }
+    .mt-2 { margin-top: .5rem; }
+    .mt-3 { margin-top: .75rem; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <div class="nav-wrap">
+    <nav class="container nav" aria-label="Main navigation">
+      <a class="brand" href="#">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 14a8 8 0 1 0 8-8"/>
+            <path d="M4 4v10h10"/>
+          </svg>
+        </span>
+        <span>Vemco Example</span>
+      </a>
+
+      <button id="nav-btn" class="hamburger" aria-label="Toggle menu" aria-controls="primary-menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18"/>
+        </svg>
+      </button>
+
+      <div id="primary-menu" class="nav-items">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact Us</a>
+      </div>
+
+      <div class="nav-cta">
+        <a class="btn" href="#">Sign in</a>
+        <a class="btn btn-primary" href="#contact">Get started</a>
+      </div>
+    </nav>
+  </div>
+
+  <div data-view="home">
+  <!-- HERO -->
+  <header class="hero">
+    <iframe 
+    width="1200px"
+    height="2000px"
+    src="https://forms.office.com/Pages/ResponsePage.aspx?id=xPsPh9fAZ0-ohNwkbRd1VtCQ3WfhJFBCkDjj1MafJ9dUNThZOUtERDkxVDgxWlVUOUhZMDlBSjI4Ni4u&embed=true"
+    frameborder="0"
+    marginwidth="0"
+    marginheight="0"
+    style="border: none; max-width:100%; max-height:100vh; position: relative; left:31%;" allowfullscreen webkitallowfullscreen mozallowfullscreen msallowfullscreen> </iframe>
+    <div class="hero-surface">
+      <div class="container">
+        <div>
+          <span class="eyebrow">New • Faster setup, cleaner UI</span>
+          <h1>Make a world‑class impression with a slick, modern homepage.</h1>
+          <p class="lede">This template gives you a beautiful, responsive landing page with a sticky, blurred nav, animated hero, feature cards, and a polished footer. Swap the brand color in one place and you’re done.</p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#features">Explore features</a>
+            <a class="btn" href="#contact">Talk to us</a>
+          </div>
+        </div>
+        <div>
+          <div class="device" role="img" aria-label="Product preview">
+            <div class="device-strip">
+              <div class="panel">
+                <h4>Realtime</h4>
+                <span class="chip">Live metrics</span>
+              </div>
+              <div class="panel">
+                <h4>Secure</h4>
+                <span class="chip">SCA ready</span>
+              </div>
+              <div class="panel">
+                <h4>Fast</h4>
+                <span class="chip"><span aria-hidden="true">⚡</span> CDN</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- FEATURES -->
+  <section id="features" class="section">
+    <div class="container">
+      <h2>Everything you need to look sharp</h2>
+      <p class="kicker">Built with semantic HTML and modern CSS. No frameworks needed, fully responsive, and easy to rebrand. Copy it straight into your project.</p>
+      <div class="features">
+        <article class="card">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="21"/></svg>
+          </div>
+          <h3>Polished UI</h3>
+          <p>Clean typography, subtle shadows, and a glassy nav. Looks premium on desktop and mobile.</p>
+        </article>
+        <article class="card">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <h3>Modular sections</h3>
+          <p>Hero, features, stats, and footer—mix and match what you need. Add more cards in seconds.</p>
+        </article>
+        <article class="card">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+          </div>
+          <h3>Easy to brand</h3>
+          <p>Change <code>--brand</code> once. The gradients, buttons, and accents update automatically.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section aria-label="Key results" class="section">
+    <div class="container stats">
+      <div class="stat"><div class="num">1.2M+</div><div class="label">Requests/day</div></div>
+      <div class="stat"><div class="num">99.99%</div><div class="label">Uptime</div></div>
+      <div class="stat"><div class="num"><span aria-hidden="true">⚡</span> 70ms</div><div class="label">P95 latency</div></div>
+      <div class="stat"><div class="num">24/7</div><div class="label">Support</div></div>
+    </div>
+  </section>
+
+  </div>
+
+  <!-- PLACEHOLDER SECTIONS -->
+  <section id="pricing" class="section" data-view="pricing" hidden>
+    <div class="container">
+      <h2>Simple pricing</h2>
+      <p class="kicker">Add your plans here. Keep it clear and honest—people love that.</p>
+      <div class="features">
+        <article class="card"><h3>Starter</h3><p>Good for getting going.</p><p class="mt-2"><strong>£0</strong> / mo</p><a class="btn mt-3" href="#">Choose Starter</a></article>
+        <article class="card"><h3>Pro</h3><p>Best for growing teams.</p><p class="mt-2"><strong>£29</strong> / mo</p><a class="btn btn-primary mt-3" href="#">Choose Pro</a></article>
+        <article class="card"><h3>Scale</h3><p>Advanced features.</p><p class="mt-2"><strong>£99</strong> / mo</p><a class="btn mt-3" href="#">Choose Scale</a></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section" data-view="about" hidden>
+    <div class="container">
+      <h2>About us</h2>
+      <p class="kicker">Say something compelling yet grounded—your mission, your edge, and why customers stay.</p>
+    </div>
+  </section>
+
+  <section id="contact" class="section" data-view="contact" hidden>
+    <div class="container">
+      <h2>Contact Us</h2>
+      <p class="kicker">Please fill in the form below and we'll get back to you.</p>
+      <div class="form-embed" style="border:1px solid var(--border); border-radius: var(--radius); overflow:hidden; box-shadow: var(--shadow);">
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container foot">
+      <div class="brand" aria-label="Home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 14a8 8 0 1 0 8-8"/>
+            <path d="M4 4v10h10"/>
+          </svg>
+        </span>
+        <span>Vemco Example</span>
+      </div>
+      <nav class="links" aria-label="Footer">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact Us</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile navigation toggle
+    const navBtn = document.getElementById('nav-btn');
+    const menu = document.getElementById('primary-menu');
+    navBtn?.addEventListener('click', () => {
+      const open = menu.classList.toggle('open');
+      navBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    // Shrink nav on scroll for a crisp feel
+    const navWrap = document.querySelector('.nav-wrap');
+    let lastY = 0;
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      const down = y > lastY && y > 20;
+      navWrap.style.borderBottomColor = down ? 'transparent' : getComputedStyle(document.documentElement).getPropertyValue('--border');
+      lastY = y;
+    });
+      
+    // --- Simple SPA router ---
+    const views = {
+      home: document.querySelector('[data-view="home"]'),
+      pricing: document.querySelector('[data-view="pricing"]'),
+      about: document.querySelector('[data-view="about"]'),
+      contact: document.querySelector('[data-view="contact"]')
+    };
+
+    function show(view, opts = {}) {
+      Object.entries(views).forEach(([name, el]) => {
+        if (!el) return;
+        el.hidden = name !== view;
+      });
+      if (view === 'home' && opts.scrollTo) {
+        document.querySelector(opts.scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      document.querySelectorAll('.nav-items a').forEach(a => {
+        const h = a.getAttribute('href');
+        a.setAttribute('aria-current', h === `#${view}` ? 'page' : 'false');
+      });
+      if (menu?.classList.contains('open')) {
+        menu.classList.remove('open');
+        navBtn?.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function routeFromHash() {
+      const h = (location.hash || '#home').slice(1);
+      if (h === 'features') show('home', { scrollTo: '#features' });
+      else if (views[h]) show(h);
+      else show('home');
+    }
+
+    window.addEventListener('hashchange', routeFromHash);
+    // Initialize route
+    routeFromHash();
+
+    // Intercept nav clicks for SPA behavior
+    document.querySelectorAll('.nav-items a').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const href = a.getAttribute('href') || '';
+        if (href.startsWith('#')) {
+          e.preventDefault();
+          location.hash = href;
+        }
+      });
+    });
+
+    // Brand click goes home
+    document.querySelector('.brand')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      location.hash = '#home';
+    });
+  </script>
+</body>
+</html>

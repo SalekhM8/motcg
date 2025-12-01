@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garage Association</title>
+    <style>
+        /* Modal Background and Positioning */
+        .tester-record-associated-garages-modal-popup {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+            font-family: 'Arial', sans-serif;
+        }
+
+        /* Modal Content */
+        .tester-record-associated-garages-modal-content {
+            background-color: #f9f9f9;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: slide-down 0.3s ease-out;
+        }
+
+        @keyframes slide-down {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Close Button */
+        .tester-record-associated-garages-close {
+            color: #bbb;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .tester-record-associated-garages-close:hover,
+        .tester-record-associated-garages-close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+
+        /* Header */
+        .tester-record-associated-garages-header {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Search Input */
+        .tester-record-associated-garages-search-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        /* Table */
+        .tester-record-associated-garages-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .tester-record-associated-garages-table th,
+        .tester-record-associated-garages-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .tester-record-associated-garages-table th {
+            background-color: #f4f4f4;
+            color: #555;
+        }
+
+        .tester-record-associated-garages-table tr:hover {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+
+        .tester-record-associated-garages-selected {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* OK Button */
+        .tester-record-associated-garages-ok-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .tester-record-associated-garages-ok-button:hover {
+            background-color: #218838;
+        }
+
+    </style>
+</head>
+<body>
+
+    <button id="associateButton" class="tester-record-associated-garages-btn">Associate to a New Garage</button>
+
+    <!-- The Modal -->
+    <div id="myModal" class="tester-record-associated-garages-modal-popup">
+        <div class="tester-record-associated-garages-modal-content">
+            <span class="tester-record-associated-garages-close">&times;</span>
+            <h2 class="tester-record-associated-garages-header">Select a Garage</h2>
+            <input type="text" id="searchInput" class="tester-record-associated-garages-search-input" placeholder="Search by trading name...">
+            <table id="garageTable" class="tester-record-associated-garages-table">
+                <thead>
+                    <tr>
+                        <th>Trading Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Garage rows will be inserted here -->
+                </tbody>
+            </table>
+            <button id="okButton" class="tester-record-associated-garages-ok-button">OK</button>
+        </div>
+    </div>
+
+    <script>
+      // Sample garage data
+const garageData = [
+    { id: 1, trading_name: 'ABC Motors' },
+    { id: 2, trading_name: 'Elite Cars' },
+    { id: 3, trading_name: 'Speedy Garage' },
+    { id: 4, trading_name: 'Garage World' },
+    { id: 5, trading_name: 'Auto Hub' },
+];
+
+const modal = document.getElementById('myModal');
+const associateButton = document.getElementById('associateButton');
+const closeSpan = document.getElementsByClassName('tester-record-associated-garages-close')[0];
+const searchInput = document.getElementById('searchInput');
+const garageTable = document.getElementById('garageTable').getElementsByTagName('tbody')[0];
+let selectedGarageId = null;
+
+// Show modal when the button is clicked
+associateButton.onclick = function() {
+    modal.style.display = 'block';
+    populateTable(garageData);
+};
+
+// Close the modal when the close button is clicked
+closeSpan.onclick = function() {
+    modal.style.display = 'none';
+};
+
+// Close the modal when clicking outside of the modal content
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+};
+
+// Populate the table with garage data
+function populateTable(data) {
+    garageTable.innerHTML = ''; // Clear the table
+    data.forEach(garage => {
+        const row = garageTable.insertRow();
+        row.setAttribute('data-id', garage.id);
+        row.onclick = function() {
+            selectRow(this);
+        };
+        const cell = row.insertCell(0);
+        cell.textContent = garage.trading_name;
+    });
+}
+
+// Search the garage data and filter the table
+searchInput.onkeyup = function() {
+    const filter = searchInput.value.toLowerCase();
+    let filteredData;
+
+    if (filter.startsWith('*') && filter.endsWith('*')) {
+        // Wildcard search, remove the asterisks
+        const trimmedFilter = filter.slice(1, -1);
+        filteredData = garageData.filter(garage => 
+            garage.trading_name.toLowerCase().includes(trimmedFilter)
+        );
+    } else if (filter.startsWith('*')) {
+        // Wildcard search at the start
+        const trimmedFilter = filter.slice(1);
+        filteredData = garageData.filter(garage => 
+            garage.trading_name.toLowerCase().endsWith(trimmedFilter)
+        );
+    } else if (filter.endsWith('*')) {
+        // Wildcard search at the end
+        const trimmedFilter = filter.slice(0, -1);
+        filteredData = garageData.filter(garage => 
+            garage.trading_name.toLowerCase().startsWith(trimmedFilter)
+        );
+    } else {
+        // Normal search, match the beginning
+        filteredData = garageData.filter(garage => 
+            garage.trading_name.toLowerCase().startsWith(filter)
+        );
+    }
+
+    populateTable(filteredData);
+};
+
+// Highlight the selected row
+function selectRow(row) {
+    // Deselect any previously selected row
+    const rows = garageTable.getElementsByTagName('tr');
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].classList.remove('tester-record-associated-garages-selected');
+    }
+    row.classList.add('tester-record-associated-garages-selected');
+    selectedGarageId = row.getAttribute('data-id');
+}
+
+// Handle the OK button click
+document.getElementById('okButton').onclick = function() {
+    if (selectedGarageId) {
+        // Here you can handle the association logic
+        alert('Selected Garage ID: ' + selectedGarageId);
+        modal.style.display = 'none';
+    } else {
+        alert('Please select a garage.');
+    }
+};
+
+    </script>
+</body>
+</html>

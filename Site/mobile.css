@@ -1,0 +1,568 @@
+@media (max-width: 1024px) {
+.sidebar {
+        display: none;
+    }
+    /* Show hamburger on mobile */
+#data-launch-toggle-menu-button {
+  display: inline-block !important;
+}
+
+/* Keep top navbar fixed but tidy */
+.data-launch-top-navbar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+/* Current header smaller & centered */
+.data-launch-current-item-header {
+  position: static;
+  flex: 1;
+  text-align: center;
+  font-size: 1.6rem;
+  margin: 0;
+  border-bottom: none;
+}
+
+/* Logged-in banner – hide or shrink on small screens */
+.data-launch-logged-in-as-banner {
+  display: none;
+}
+
+/* Modern record header: full-width bar under top nav */
+.modern-record-header {
+  width: 100vw;
+  left: 0;
+  top: 48px;
+  height: auto;
+  padding: 6px 10px;
+}
+
+.modern-record-title {
+  font-size: 12px;
+}
+
+.modern-record-subtitle {
+  font-size: 15px;
+}
+
+/* Main screens scroll under the navbar */
+.data-launch-main-screen {
+  top: 48px;
+  height: auto;
+  min-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+/* Old “no mobile” message – now always hidden */
+.mobile-message {
+  display: none !important;
+}
+
+/* Optional: show your beta banner on mobile */
+.mobile-beta-banner {
+            position: fixed;
+            top: 30vh;
+            left: 50%;
+            background: #ffc107;
+            color: #000;
+            font-size: 18px;
+            text-align: center;
+            z-index: 1000;
+            display: block;
+            height: 30vh;
+            width: 80vw;
+            padding-top: 10vh;
+}
+
+.mobile-beta-close {
+  cursor: pointer;
+  float: right;
+  margin-left: 8px;
+}
+
+.data-launch-side-bar {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: calc(100vh - 48px);
+    background: #0068B5;
+    overflow-y: auto;
+    padding-top: 16px;
+            z-index: 99999;
+    /* slide-in setup */
+    display: block !important;              /* always in the DOM */
+    transform: translateX(-100%);           /* start off-screen */
+    transition: transform 0.5s ease-out;    /* animate movement */
+}
+
+/* when body has this class, show the menu */
+body.mobile-nav-open .data-launch-side-bar {
+    transform: translateX(0);
+}
+
+.mobile-nav-overlay {
+    position: fixed;
+    inset: 48px 0 0 0;          /* under the top bar */
+    background: rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-out;
+    z-index: 900;
+}
+
+body.mobile-nav-open .mobile-nav-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.data-launch-activate-menu {
+    display: block !important;   /* override desktop rule */
+    transition: transform 0.3s ease-out; 
+    transform: translateX(0);    /* slide into view */
+}
+
+/* Close button visible */
+.data-launch-side-bar-close-button {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    font-size: 24px !important;
+    cursor: pointer;
+    color: #fff !important;
+}
+
+
+.data-launch-side-bar-ul {
+    list-style: none;
+    margin: 14px 0 16px;                  /* pushes items down a bit */
+    padding: 0;
+}
+
+
+.data-launch-side-bar-li {
+  margin-bottom: 8px;
+  height: 90px;
+}
+
+.modern-menu-link,
+.modern-menu-text,
+.modern-icon {
+  color: #fff !important;
+  font-size: 30px;
+  padding-left: 13%;
+}
+
+.modern-menu-link {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modern-menu-link.active {
+    background-color: rgba(255,255,255,0.15);
+}
+
+/* Main field column becomes a simple stacked layout */
+.data-launch-field-container {
+  height: auto;
+  padding: 10px;
+}
+
+/* Ensure form fields span width */
+.data-launch-input-field-container,
+.data-launch-input-field {
+  width: 100%;
+}
+
+.data-launch-field-labels {
+  font-size: 13px;
+}
+
+/* Textareas – keep them manageable */
+textarea {
+  max-height: 200px;
+}
+
+/* Generic bottom button bar: full width, stacked */
+.data-launch-bottom-bar,
+.garage-bottom-buttons,
+.mot-booking-bottom-buttons {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  background: #fff;
+  z-index: 999;
+}
+
+.data-launch-bottom-bar button,
+.garage-bottom-buttons button,
+.mot-booking-bottom-buttons button {
+  width: 100%;
+  margin: 0;
+}
+
+.booking-modal-content,
+.defect-report-modal-content,
+.garage-user-modal-content,
+.mot-site-audit-modal-content,
+.mot-calibration-modal-content,
+.qc-checker-modal-content,
+.mot-bay-cleaning-log-modal-content {
+  width: 94% !important;
+  max-width: none;
+  margin: 10% auto;
+  left: 0 !important;
+  right: 0;
+  border-radius: 8px;
+}
+
+.booking-modal-popup,
+.defect-report-modal-popup,
+.garage-user-modal-popup,
+.mot-site-audit-modal-popup,
+.mot-calibration-modal-popup,
+.qc-checker-modal-popup,
+.mot-bay-cleaning-log-modal-popup {
+  padding: 0 0;
+}
+
+/* Any embedded map/iframe: just make it responsive */
+iframe {
+  max-width: 100%;
+}
+
+/* If you have a specific map container, keep it short */
+#garageMap,
+.google-map-container {
+  width: 100%;
+  height: 240px;
+}
+
+
+.data-launch-side-bar-li a,
+.modern-menu-link {
+    display: flex !important;
+    align-items: center !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+    color: #fff !important;
+    height: auto !important;
+    text-decoration: none;
+}
+
+
+.modern-icon {
+    font-size: 20px !important;
+    width: 24px;
+    height: 24px;
+}
+
+.data-launch-side-bar-close-button {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    font-size: 24px !important;
+    cursor: pointer;
+    color: white !important;
+}
+
+/* ///// home page  */
+.data-launch-homepage-snazz-up-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: 100vh;
+    position: relative;
+    padding-top: 50vh;
+}
+.modern-button {
+    width: 100px;
+    padding-left: 16px;
+}
+.button-container {
+    text-align: center;
+    position: fixed;
+    top: 0;
+    left: 14%;
+    z-index: 999;
+}
+.data-launch-current-item-header {
+    display: none;
+}
+
+/* ---- TESTING STATION TABLE – MOBILE FIX ---- */
+
+/* Wrapper scrolls horizontally instead of turning rows into cards */
+.responsive-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* ===== TESTING STATION / RESPONSIVE TABLE – MOBILE OVERRIDE ===== */
+
+/* show the header again */
+.responsive-table__head {
+  display: table-header-group !important;
+}
+
+/* each row behaves like a normal table row */
+.responsive-table__row {
+  display: table-row;
+}
+
+/* cells behave like normal table cells */
+.responsive-table__body__text {
+  display: table-cell !important;
+  padding: 6px 8px;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+/* kill the "data-title : value" labels */
+.responsive-table__body__text::before {
+  content: none !important;
+  margin: 0 !important;
+}
+
+/* ==== FIX TESTING STATION HEADER ON MOBILE ==== */
+
+/* header row: no extra padding/grid behaviour */
+.responsive-table__head .responsive-table__row {
+  display: table-row;
+  padding: 0 !important;
+}
+
+/* header cells as normal table cells */
+.responsive-table__head__title {
+  display: table-cell !important;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* also cover any th inside the header row */
+.responsive-table__head .responsive-table__row th {
+  display: table-cell !important;
+  padding: 6px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+
+/* //// to fix the garage record form */
+
+ body {
+    display: block !important;
+    align-items: initial !important;
+    justify-content: initial !important;
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+
+  .data-launch-main-screen {
+    height: auto !important;
+    overflow-y: visible !important;
+  }
+
+  .data-launch-garages-screen {
+    top: 29px !important;
+    left: 18px !important;
+    margin: 0 !important;
+    padding: 0 8px 80px !important;
+    width: 100% !important;
+  }
+
+  /* ✅ Only the active tab shows */
+  .data-launch-garages-screen.active {
+    display: block !important;
+  }
+
+  /* ✅ Everything else stays hidden */
+  .data-launch-garages-screen:not(.active) {
+    display: none !important;
+  }
+
+  .data-launch-field-container {
+    height: auto !important;
+    min-height: 0 !important;
+    margin-bottom: 16px !important;
+  }
+
+  .data-launch-subgrid-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  .data-launch-garage-reminders-table {
+    table-layout: auto !important;
+  }
+
+  .data-launch-garages-screen iframe {
+    width: 100% !important;
+    height: 300px !important;
+  }
+
+
+  /* //// trying to fix the width issue on tablets for col-lg items */
+
+
+  .data-launch-garages-screen .col-lg-3.data-launch-field-container,
+  .data-launch-garages-screen .col-lg-4.data-launch-field-container,
+  .data-launch-garages-screen .col-lg-5.data-launch-field-container {
+    width: 100% !important;
+  }
+
+  .sidebar-toggle {
+    height: 100%;
+  }
+
+  /* //// fix the save and save & close button on tablet and iphone */
+
+   /* Let the garage screen content scroll naturally */
+  #garagePage {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+  }
+
+  /* Fixed bottom bar: Save + Save & Close */
+  #garagePage .data-launch-save-record,
+  #garagePage .data-launch-save-close-record {
+    position: fixed !important;     /* stick to viewport */
+    bottom: 12px !important;        /* just above bottom edge */
+    top: auto !important;           /* kill any top: 90vh etc */
+    height: auto !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
+    border-radius: 6px;
+    font-size: 16px !important;
+    padding: 10px 0 !important;
+    display: block !important;
+  }
+
+  /* Left button: Save */
+  #garagePage .data-launch-save-record {
+    left: 8vw !important;
+    width: 40vw !important;
+    background-color: #1abc9c !important;
+    border-color: #1abc9c !important;
+    color: #ffffff !important;
+    text-align: center;
+  }
+
+  /* Right button: Save & Close */
+  #garagePage .data-launch-save-close-record {
+    left: 52vw !important;          /* tweak to taste: 52–54vw */
+    width: 40vw !important;
+    background-color: #f39c12 !important;
+    border-color: #f39c12 !important;
+    color: #000000 !important;
+    text-align: center;
+  }
+
+  /* Make sure the last bit of content isn't hidden behind the bar */
+  #garagePage .data-launch-garages-screen.active {
+    padding-bottom: 80px !important;
+  }
+
+    #testingStationPage {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+  }
+
+  /* Fixed bottom bar: Save + Save & Close */
+  #testingStationPage .data-launch-save-record,
+  #testingStationPage .data-launch-save-close-record {
+    position: fixed !important;     /* stick to viewport */
+    bottom: 12px !important;        /* just above bottom edge */
+    top: auto !important;           /* kill any top/vh stuff */
+    height: auto !important;
+    z-index: 9999 !important;
+    margin: 0 !important;
+    border-radius: 6px;
+    font-size: 16px !important;
+    padding: 10px 0 !important;
+    display: block !important;
+  }
+
+  /* Left button: Save */
+  #testingStationPage .data-launch-save-record {
+    left: 8vw !important;
+    width: 40vw !important;
+    background-color: #1abc9c !important;
+    border-color: #1abc9c !important;
+    color: #ffffff !important;
+    text-align: center;
+  }
+
+  /* Right button: Save & Close */
+  #testingStationPage .data-launch-save-close-record {
+    left: 52vw !important;          /* tweak between 52–54vw if needed */
+    width: 40vw !important;
+    background-color: #f39c12 !important;
+    border-color: #f39c12 !important;
+    color: #000000 !important;
+    text-align: center;
+  }
+
+  /* Ensure last bit of content isn't hidden behind the bar */
+  #testingStationPage .data-launch-testing-stations-screen.active {
+    padding-bottom: 80px !important;
+  }
+
+  .sleek-sidebar.open {
+    z-index: 99999;
+  }
+
+
+  #testerRecordsPage .data-launch-save-record,
+  #testerRecordsPage .data-launch-save-close-record {
+    position: fixed !important;
+    bottom: 12px !important;    /* always stuck to bottom of viewport */
+    top: auto !important;
+    height: auto;
+    z-index: 9999;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  /* Left (Save) button */
+  #testerRecordsPage .data-launch-save-record {
+    width: 40vw;
+    left: 8vw;
+  }
+
+  /* Right (Save & Close) button */
+  #testerRecordsPage .data-launch-save-close-record {
+    width: 40vw;
+    right: 8vw;
+  }
+  .notes-table th, .notes-table td {
+          width: 6% !important;
+          overflow: hidden;
+  }
+
+
+
+  /* //// mot calibration subgrid */
+
+  
+
+
+
+}
