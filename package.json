@@ -9,6 +9,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.670.0",
     "@aws-sdk/s3-request-presigner": "^3.673.0",
+    "@getbrevo/brevo": "^3.0.1",
     "aws-sdk": "^2.1691.0",
     "axios": "^1.7.9",
     "body-parser": "^1.19.0",
@@ -25,6 +26,7 @@
     "mysql2": "^3.11.0",
     "nexmo": "^2.9.1",
     "ngrok": "^5.0.0-beta.2",
+    "node-cron": "^4.2.1",
     "node-fetch": "^2.7.0",
     "php-express": "0.0.3",
     "request": "^2.88.2",

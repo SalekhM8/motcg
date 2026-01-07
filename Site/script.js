@@ -269,7 +269,7 @@ function changePage(event, id, urlRedirectToPage) {
 
 
 (function() {
-    emailjs.init("rR7dPPyGc_FeGArbd"); // Replace with your EmailJS user ID
+    emailjs.init("nOVy_MTjfwOeJAa8W"); // MOTCG EmailJS Public Key
     })
 ();
 

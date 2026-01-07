@@ -7,6 +7,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 const axios = require('axios');
 const multer = require('multer');
+const cron = require('node-cron');
+const Brevo = require('@getbrevo/brevo');
 const { parseStringPromise } = require("xml2js");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -634,12 +636,192 @@ const pool = mysql.createPool({
 ////// END OF WHITETip JAWSDB INSTANCE CONNECTION /////////////////////////////////////////////
 
 
+// ============== AUTOMATED EMAIL REMINDERS (BREVO) ==============
+
+// Initialize Brevo API
+const emailApiInstance = new Brevo.TransactionalEmailsApi();
+emailApiInstance.setApiKey(
+  Brevo.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY
+);
+
+// Determine if this day should trigger an email
+// Schedule: 30, 26, 23, then every 5 days (18, 13, 8), then daily from 3 days
+function shouldSendReminder(daysUntil) {
+  // First reminders
+  if ([30, 26, 23].includes(daysUntil)) return true;
+  // Every 5 days from 23 down to 3
+  if ([18, 13, 8].includes(daysUntil)) return true;
+  // Daily from 3 days
+  if (daysUntil <= 3 && daysUntil >= 0) return true;
+  return false;
+}
+
+// Check if escalation is needed (23 days or less = include all contacts)
+function isEscalation(daysUntil) {
+  return daysUntil <= 23;
+}
+
+// Get all email recipients for a garage
+function getRecipients(garage, escalate) {
+  const recipients = [];
+  
+  // Always include main contact
+  if (garage.contact_email_garage && garage.contact_email_garage.trim()) {
+    recipients.push({
+      email: garage.contact_email_garage.trim(),
+      name: garage.trading_name_garage || 'Team'
+    });
+  }
+  
+  // If escalation, include additional contacts
+  if (escalate) {
+    if (garage.invoice_contact_email_garage && garage.invoice_contact_email_garage.trim()) {
+      recipients.push({
+        email: garage.invoice_contact_email_garage.trim(),
+        name: `${garage.trading_name_garage} - Invoice Contact`
+      });
+    }
+    if (garage.aed_email_garage && garage.aed_email_garage.trim()) {
+      recipients.push({
+        email: garage.aed_email_garage.trim(),
+        name: `${garage.trading_name_garage} - AED`
+      });
+    }
+  }
+  
+  // Remove duplicates
+  const uniqueEmails = [...new Map(recipients.map(r => [r.email.toLowerCase(), r])).values()];
+  return uniqueEmails;
+}
+
+// Send inspection reminder email
+async function sendInspectionReminder(garage, daysUntil, escalate = false) {
+  try {
+    const recipients = getRecipients(garage, escalate);
+    if (recipients.length === 0) {
+      console.log(`⚠️ No valid email addresses for ${garage.trading_name_garage}`);
+      return false;
+    }
+
+    const urgencyText = daysUntil <= 3 ? 'URGENT: ' : (escalate ? 'ESCALATION: ' : '');
+    const urgencyColor = daysUntil <= 3 ? '#DC3545' : '#0068B5';
+    
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = { email: 'noreply@twilightpharmacy.co.uk', name: 'MOTCG' };
+    sendSmtpEmail.to = recipients;
+    sendSmtpEmail.subject = `${urgencyText}MOT Inspection Due in ${daysUntil} Day${daysUntil !== 1 ? 's' : ''} - Action Required`;
+    sendSmtpEmail.htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: ${urgencyColor}; border-bottom: 2px solid ${urgencyColor}; padding-bottom: 10px;">
+          ${urgencyText}Inspection Reminder
+        </h2>
+        <p>Dear ${garage.contact_forename_garage || 'Team'},</p>
+        <p>This is a reminder that <strong>${garage.trading_name_garage}</strong> has an MOT inspection due in <strong>${daysUntil} day${daysUntil !== 1 ? 's' : ''}</strong>.</p>
+        ${escalate ? '<p style="color: #DC3545; font-weight: bold;">⚠️ This is an escalated reminder - all contacts are being notified.</p>' : ''}
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Site Number:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${garage.vts_site_number_garage || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Due Date:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${garage.due_date || 'See system'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; background: #f9f9f9;"><strong>Reminder:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${garage.reminder_title || 'Inspection Due'}</td>
+          </tr>
+        </table>
+        <p>Please ensure all documentation and equipment is ready for inspection.</p>
+        <br>
+        <p style="color: #666;">Regards,<br><strong>MOTCG Team</strong></p>
+      </div>
+    `;
+
+    await emailApiInstance.sendTransacEmail(sendSmtpEmail);
+    const recipientList = recipients.map(r => r.email).join(', ');
+    console.log(`✅ Reminder sent to ${garage.trading_name_garage} (${recipientList})${escalate ? ' [ESCALATED]' : ''}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send to ${garage.trading_name_garage}:`, error.message);
+    return false;
+  }
+}
+
+// Run the inspection reminder job
+async function runInspectionReminderJob() {
+  console.log('🔍 Running inspection reminder check...', new Date().toISOString());
+  
+  try {
+    const [reminders] = await pool.promise().query(`
+      SELECT 
+        g.*,
+        r.due_date,
+        r.title as reminder_title,
+        DATEDIFF(r.due_date, CURDATE()) as days_until_due
+      FROM data_launch_garage_records g
+      JOIN data_launch_garage_reminders r ON g.id = r.garage_id
+      WHERE r.due_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 31 DAY)
+        AND (g.data_launch_marked_for_deletion IS NULL OR g.data_launch_marked_for_deletion != 1)
+        AND (r.data_launch_marked_for_deletion IS NULL OR r.data_launch_marked_for_deletion != 1)
+        AND g.contact_email_garage IS NOT NULL
+        AND g.contact_email_garage != ''
+    `);
+    
+    console.log(`📋 Found ${reminders.length} upcoming reminders`);
+    
+    let sentCount = 0;
+    for (const garage of reminders) {
+      const daysUntil = garage.days_until_due;
+      
+      // Check if we should send on this day
+      if (shouldSendReminder(daysUntil)) {
+        const escalate = isEscalation(daysUntil);
+        const sent = await sendInspectionReminder(garage, daysUntil, escalate);
+        if (sent) sentCount++;
+        
+        // Rate limiting - wait 500ms between emails
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    console.log(`📧 Sent ${sentCount} reminder emails`);
+    return { found: reminders.length, sent: sentCount };
+  } catch (error) {
+    console.error('❌ Inspection reminder job failed:', error);
+    return { error: error.message };
+  }
+}
+
+// Schedule: Run at 9:00 AM every day
+cron.schedule('0 9 * * *', () => {
+  console.log('⏰ Scheduled inspection reminder job starting...');
+  runInspectionReminderJob();
+});
+console.log('⏰ Inspection reminder cron job scheduled for 9:00 AM daily');
+
+// ============== END AUTOMATED EMAIL REMINDERS ==============
+
+
 // Function to check if a table is allowed
 const allowedTables = ['testing_station', 'data_launch_garage_records', 'tester_garages', 'data_launch_tester_records', 'data_launch_notes', 'data_launch_mot_equipment', 'data_launch_images', 'data_launch_mot_calibration', 'data_launch_mot_site_audits', 'data_launch_qc_checkers_for_car', 'data_launch_garage_bookings', 'data_launch_defect_reports', 'data_launch_mot_bay_cleaning_log', 'data_launch_tester_training_records', 'data_launch_qc_checkers_for_bike', 'data_launch_users', 'data_launch_garage_reminders', 'data_launch_mot_reconciliations', 'data_launch_special_notices', 'data_launch_special_notices_acknowledgements', 'data_launch_bays', 'data_launch_tqis', 'data_launch_ae_users_accessible_garages']; // Add more tables as needed
 
 function isTableAllowed(table) {
   return allowedTables.includes(table);
 }
+
+// ============== TEST ENDPOINT FOR EMAIL REMINDERS ==============
+app.get('/api/test-inspection-emails', async (req, res) => {
+  console.log('🧪 Manual inspection email test triggered');
+  const result = await runInspectionReminderJob();
+  res.json({ 
+    message: 'Inspection reminder job completed', 
+    result,
+    timestamp: new Date().toISOString()
+  });
+});
+// ============== END TEST ENDPOINT ==============
 
 // app.get('/api/testing_station/search', (req, res) => {
 //     const vtsSiteNumber = req.query.vts_site_number;

@@ -73,7 +73,7 @@ function submitEmail() {
             // old hotmail account
             // emailjs.send('service_dlq', 'template_9q4c1yd', emailParams)
             /// new support@vtspro.co.uk
-            emailjs.send('service_ykm9x5e', 'template_9q4c1yd', emailParams)
+            emailjs.send('service_xhjzgor', 'template_n1eu478', emailParams)
                 .then(response => {
                     console.log('SUCCESS!', response.status, response.text);
                     closeModal();
