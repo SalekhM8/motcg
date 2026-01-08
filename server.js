@@ -49,12 +49,12 @@ if (!fs.existsSync(uploadDir)) {
     console.log('✅ Uploads directory already exists.');
 }
 
-// Initialize the S3 client
+// Initialize the S3 client - using Bucketeer environment variables
 const s3Client = new S3Client({
-  region: 'eu-west-1',
+  region: process.env.BUCKETEER_AWS_REGION || 'eu-west-1',
   credentials: {
-    accessKeyId:  'AKIAVZH4SBSYYGQ4BAAO',
-    secretAccessKey: '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',
+    accessKeyId: process.env.BUCKETEER_AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -337,7 +337,7 @@ const uploadFile = async (filePath, fileName) => {
   const fileContent = fs.readFileSync(filePath);
 
   const params = {
-    Bucket: 'bucketeer-cdda425f-b90b-44bd-b711-5d96d47252e4',
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
     Key: fileName,
     Body: fileContent,
   };
@@ -355,7 +355,7 @@ const uploadFile = async (filePath, fileName) => {
 // Function to generate a pre-signed URL for viewing the uploaded file
 const generatePresignedUrl = async (fileName) => {
   const params = {
-    Bucket: 'bucketeer-cdda425f-b90b-44bd-b711-5d96d47252e4',
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
     Key: fileName,
   };
 
@@ -438,7 +438,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 // Function to list files in the bucket
 const listFiles = async () => {
   const params = {
-    Bucket: 'bucketeer-cdda425f-b90b-44bd-b711-5d96d47252e4',
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
   };
 
   try {
@@ -461,7 +461,7 @@ const listFiles = async () => {
 // Function to download/view file from Bucketeer (S3)
 const downloadFile = async (fileKey, res) => {
   const params = {
-    Bucket: 'bucketeer-cdda425f-b90b-44bd-b711-5d96d47252e4',
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
     Key: fileKey,
   };
 
@@ -490,7 +490,7 @@ app.get('/files/download/:filename', async (req, res) => {
 
 app.get('/files', async (req, res) => {
   const params = {
-    Bucket: 'bucketeer-cdda425f-b90b-44bd-b711-5d96d47252e4',
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,
   };
 
   try {
@@ -513,7 +513,7 @@ app.get('/files', async (req, res) => {
 // Function to delete a file from S3 using the S3 key (file name)
 const deleteFile = async (fileKey) => {
   const params = {
-    Bucket: 'bucketeer-cdda425f-b90b-44bd-b711-5d96d47252e4',  // Your bucket name
+    Bucket: process.env.BUCKETEER_BUCKET_NAME,  // Your bucket name
     Key: fileKey,  // The key (file name) of the file you want to delete
   };
 
