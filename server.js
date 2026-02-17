@@ -49,6 +49,18 @@ if (!fs.existsSync(uploadDir)) {
     console.log('✅ Uploads directory already exists.');
 }
 
+const isS3Configured = Boolean(
+  process.env.BUCKETEER_BUCKET_NAME &&
+  process.env.BUCKETEER_AWS_ACCESS_KEY_ID &&
+  process.env.BUCKETEER_AWS_SECRET_ACCESS_KEY
+);
+const useLocalUploadFallback =
+  process.env.LOCAL_UPLOAD_FALLBACK === 'true' ||
+  (process.env.NODE_ENV !== 'production' && !isS3Configured);
+console.log(
+  `Upload mode: ${useLocalUploadFallback ? 'LOCAL_FALLBACK' : 'S3'}`
+);
+
 // Initialize the S3 client - using Bucketeer environment variables
 const s3Client = new S3Client({
   region: process.env.BUCKETEER_AWS_REGION || 'eu-west-1',
@@ -110,6 +122,16 @@ app.get('/fetch-file', async (req, res) => {
   }
 
   try {
+      const parsedUrl = new URL(fileUrl, 'http://localhost');
+      if (parsedUrl.pathname.startsWith('/uploads/')) {
+          const safeFileName = path.basename(decodeURIComponent(parsedUrl.pathname.replace('/uploads/', '')));
+          const localFilePath = path.join(uploadDir, safeFileName);
+          if (!fs.existsSync(localFilePath)) {
+              return res.status(404).json({ error: 'File not found in local uploads' });
+          }
+          return res.sendFile(localFilePath);
+      }
+
       // Fetch the file from Bucketeer
       const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
 
@@ -155,9 +177,9 @@ async function getAutoGuruAccessToken() {
   if (agToken && now < agTokenExp - 60_000) return agToken;
 
   const form = new URLSearchParams();
-  form.append('client_id', "265");
-  form.append('client_secret', "x6bh$dussI2K&WrxHDOmL@RPAZcJ5p8VUuIf#sNG");
-  form.append('grant_type', 'password'); // as per their guide
+  form.append('client_id', process.env.AUTOGURU_CLIENT_ID || '265');
+  form.append('client_secret', process.env.AUTOGURU_CLIENT_SECRET || '');
+  form.append('grant_type', 'password');
 
   try {
     const resp = await axios.post(
@@ -176,8 +198,8 @@ async function getAutoGuruAccessToken() {
     // Optional quick retry with client_credentials if their tenant is set up that way.
     if (body?.error === 'unsupported_grant_type' || body?.error_description?.includes('grant')) {
       const alt = new URLSearchParams();
-      alt.append('client_id', "265");
-      alt.append('client_secret', "x6bh$dussI2K&WrxHDOmL@RPAZcJ5p8VUuIf#sNG");
+      alt.append('client_id', process.env.AUTOGURU_CLIENT_ID || '265');
+      alt.append('client_secret', process.env.AUTOGURU_CLIENT_SECRET || '');
       alt.append('grant_type', 'client_credentials');
       const resp2 = await axios.post(
         AUTOGURU_AUTH_URL || 'https://auth.autoguruservices.com/token',
@@ -215,8 +237,8 @@ app.get('/decrypt-data', async (req, res) => {
       return res.status(400).json({ error: 'Encrypted data is required' });
   }
 
-  // const url = `http://localhost:8000/decryption.php?data=${encodeURIComponent(encrypted)}`;
-  const url = `http://localhost:8001/decryption.php?data=${encodeURIComponent(encryptedString)}`;
+  const decryptionHost = process.env.DECRYPTION_SERVICE_URL || 'http://localhost:8001';
+  const url = `${decryptionHost}/decryption.php?data=${encodeURIComponent(encrypted)}`;
 
 
   try {
@@ -334,6 +356,10 @@ function sendText () {
 
 // Function to upload file to Bucketeer S3
 const uploadFile = async (filePath, fileName) => {
+  if (useLocalUploadFallback) {
+    return { ETag: `local-${Date.now()}` };
+  }
+
   const fileContent = fs.readFileSync(filePath);
 
   const params = {
@@ -371,6 +397,9 @@ const generatePresignedUrl = async (fileName) => {
 
 app.get('/get-presigned-url', async (req, res) => {
   const fileName = req.query.fileName;
+  if (useLocalUploadFallback) {
+    return res.json({ url: `/uploads/${encodeURIComponent(fileName)}` });
+  }
   try {
     const url = await generatePresignedUrl(fileName);
     res.json({ url });
@@ -396,10 +425,16 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
   try {
     const result = await uploadFile(filePath, req.file.filename);// Result contains metadata like ETag
-    console.log(`✅ File uploaded to S3: ${req.file.filename}`);
-    // Generate the pre-signed URL for preview
-    const previewUrl = await generatePresignedUrl(req.file.filename);
-    console.log(`✅ Generated S3 URL: ${previewUrl}`);
+    if (useLocalUploadFallback) {
+      console.log(`✅ File saved locally: ${req.file.filename}`);
+    } else {
+      console.log(`✅ File uploaded to S3: ${req.file.filename}`);
+    }
+    // Generate preview URL
+    const previewUrl = useLocalUploadFallback
+      ? `/uploads/${encodeURIComponent(req.file.filename)}`
+      : await generatePresignedUrl(req.file.filename);
+    console.log(`✅ Generated file URL: ${previewUrl}`);
 
     res.status(200).json({
       message: 'File uploaded successfully.',
@@ -418,15 +453,17 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       details: err.message
     });
   } finally {
-    setTimeout(() => {
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error(`❌ Failed to delete temp file: ${filePath}`, err);
-        } else {
-          console.log(`✅ Temp file deleted: ${filePath}`);
-        }
-      });
-    }, 5000);  // Delays deletion by 5 seconds
+    if (!useLocalUploadFallback) {
+      setTimeout(() => {
+        fs.unlink(filePath, (err) => {
+          if (err) {
+            console.error(`❌ Failed to delete temp file: ${filePath}`, err);
+          } else {
+            console.log(`✅ Temp file deleted: ${filePath}`);
+          }
+        });
+      }, 5000);  // Delays deletion by 5 seconds
+    }
   }
 });
 
@@ -550,6 +587,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(express.static(path.join(__dirname, 'Site')));
+app.use('/uploads', express.static(uploadDir));
 
 // Middleware to log all incoming requests and their responses
 app.use((req, res, next) => {
@@ -563,11 +601,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Safety guard: block mutating endpoints in non-production unless explicitly enabled.
+const isNonProd = process.env.NODE_ENV !== 'production';
+const allowDbWrites = process.env.ALLOW_DB_WRITES === 'true';
+app.use((req, res, next) => {
+  const isMutatingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  const isProtectedWriteEndpoint = req.path.startsWith('/api/') || req.path === '/upload';
+
+  if (isNonProd && !allowDbWrites && isMutatingMethod && isProtectedWriteEndpoint) {
+    return res.status(403).json({
+      error: 'Writes are disabled in non-production. Set ALLOW_DB_WRITES=true to enable.',
+    });
+  }
+
+  next();
+});
+
 // const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 app.post('/api/mot-reconciliation/delete-file', async (req, res) => {
   try {
     const { key } = req.body;
+
+    if (useLocalUploadFallback) {
+      const safeFileName = path.basename(String(key || ''));
+      const localFilePath = path.join(uploadDir, safeFileName);
+      if (fs.existsSync(localFilePath)) {
+        fs.unlinkSync(localFilePath);
+      }
+      return res.send({ success: true });
+    }
 
     const command = new DeleteObjectCommand({
       Bucket: process.env.BUCKETEER_BUCKET_NAME,
@@ -609,27 +672,43 @@ app.post('/api/mot-reconciliation/delete-file', async (req, res) => {
 
 //// OLD DB 29/04/25  - this was the blacktip shared instance /////
 // const pool = mysql.createPool({
-//   host: process.env.DB_HOST || 'uf63wl4z2daq9dbb.chr7pe7iynqr.eu-west-1.rds.amazonaws.com',
-//   user: process.env.DB_USER || 'z3rc3i22ilpdtyh7',
-//   password: process.env.DB_PASSWORD || 'kchjfuortpxwbiuc',
-//   database: process.env.DB_NAME || 'rdb73dbfwzyz1yh5',
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME,
 //     waitForConnections: true,
 //     queueLimit: 0,
-//     acquireTimeout: 10000,  
+//     acquireTimeout: 10000,
 //     connectionLimit: 5
 // });
 
 ///// END OF OLD DB 29/04/25 - this was the blacktip shared instance /////
 
 //// NEW WhiteTip JAWSDB Instance - STARTING on the 29/04/25 /////
+const requiredDbEnvVars = [
+  'DB_HOST_WHITETIP',
+  'DB_USER_WHITETIP',
+  'DB_PASSWORD_WHITETIP',
+  'DB_NAME_WHITETIP'
+];
+
+const missingDbEnvVars = requiredDbEnvVars.filter((name) => !process.env[name]);
+if (missingDbEnvVars.length > 0) {
+  console.error(
+    `Missing required DB env vars: ${missingDbEnvVars.join(', ')}. ` +
+    'Refusing to start to avoid accidental production DB usage.'
+  );
+  process.exit(1);
+}
+
 const pool = mysql.createPool({
-  host: process.env.DB_HOST_WHITETIP || 'us3rzbv7qzsfq3ch.chr7pe7iynqr.eu-west-1.rds.amazonaws.com',
-  user: process.env.DB_USER_WHITETIP || 'teuld0e6dnvrltf1',
-  password: process.env.DB_PASSWORD_WHITETIP || 'mg1aqr1xk2lgzuks',
-  database: process.env.DB_NAME_WHITETIP || 'rdb73dbfwzyz1yh5',
+  host: process.env.DB_HOST_WHITETIP,
+  user: process.env.DB_USER_WHITETIP,
+  password: process.env.DB_PASSWORD_WHITETIP,
+  database: process.env.DB_NAME_WHITETIP,
     waitForConnections: true,
     queueLimit: 0,
-    acquireTimeout: 10000,  
+    acquireTimeout: 10000,
     connectionLimit: 10,
      dateStrings: ['DATE'] // ✅ THIS FIXES YOUR DATE BUG
 });
@@ -637,6 +716,10 @@ const pool = mysql.createPool({
 
 
 // ============== AUTOMATED EMAIL REMINDERS (BREVO) ==============
+
+// Optional override for safe testing in non-prod environments.
+const REMINDER_TEST_EMAIL = process.env.REMINDER_TEST_EMAIL || '';
+const APP_BASE_URL = (process.env.APP_BASE_URL || `http://localhost:${port}`).replace(/\/+$/, '');
 
 // Initialize Brevo API
 const emailApiInstance = new Brevo.TransactionalEmailsApi();
@@ -698,17 +781,24 @@ function getRecipients(garage, escalate) {
 // Send inspection reminder email
 async function sendInspectionReminder(garage, daysUntil, escalate = false) {
   try {
-    const recipients = getRecipients(garage, escalate);
+    let recipients = getRecipients(garage, escalate);
     if (recipients.length === 0) {
       console.log(`⚠️ No valid email addresses for ${garage.trading_name_garage}`);
       return false;
     }
 
+    // Force all reminders to a single address when testing.
+    if (REMINDER_TEST_EMAIL) {
+      recipients = [{ email: REMINDER_TEST_EMAIL, name: 'Reminder Test' }];
+    }
+
     const urgencyText = daysUntil <= 3 ? 'URGENT: ' : (escalate ? 'ESCALATION: ' : '');
     const urgencyColor = daysUntil <= 3 ? '#DC3545' : '#0068B5';
     
+    const ackLink = `${APP_BASE_URL}/api/reminders/${garage.reminder_id}/ack?garage_id=${encodeURIComponent(garage.id || '')}`;
+
     const sendSmtpEmail = new Brevo.SendSmtpEmail();
-    sendSmtpEmail.sender = { email: 'noreply@twilightpharmacy.co.uk', name: 'MOTCG' };
+    sendSmtpEmail.sender = { email: 'noreply@motcg.co.uk', name: 'MOT Compliance Group' };
     sendSmtpEmail.to = recipients;
     sendSmtpEmail.subject = `${urgencyText}MOT Inspection Due in ${daysUntil} Day${daysUntil !== 1 ? 's' : ''} - Action Required`;
     sendSmtpEmail.htmlContent = `
@@ -733,6 +823,11 @@ async function sendInspectionReminder(garage, daysUntil, escalate = false) {
             <td style="padding: 8px; border: 1px solid #ddd;">${garage.reminder_title || 'Inspection Due'}</td>
           </tr>
         </table>
+        <div style="margin: 20px 0;">
+          <a href="${ackLink}" style="display: inline-block; padding: 12px 18px; background: #0068B5; color: #fff; text-decoration: none; border-radius: 6px;">
+            Acknowledged
+          </a>
+        </div>
         <p>Please ensure all documentation and equipment is ready for inspection.</p>
         <br>
         <p style="color: #666;">Regards,<br><strong>MOTCG Team</strong></p>
@@ -757,6 +852,7 @@ async function runInspectionReminderJob() {
     const [reminders] = await pool.promise().query(`
       SELECT 
         g.*,
+        r.id as reminder_id,
         r.due_date,
         r.title as reminder_title,
         DATEDIFF(r.due_date, CURDATE()) as days_until_due
@@ -803,6 +899,192 @@ console.log('⏰ Inspection reminder cron job scheduled for 9:00 AM daily');
 
 // ============== END AUTOMATED EMAIL REMINDERS ==============
 
+// Log acknowledgement clicks (does not stop emails).
+app.get('/api/reminders/:id/ack', async (req, res) => {
+  const reminderId = parseInt(req.params.id, 10);
+  const garageId = parseInt(req.query.garage_id, 10) || null;
+  const userAgent = req.get('user-agent') || '';
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+  if (!reminderId) {
+    return res.status(400).send('Invalid reminder id');
+  }
+
+  try {
+    await pool.promise().query(
+      `INSERT INTO data_launch_garage_reminder_acknowledgements
+        (reminder_id, garage_id, clicked_at, user_agent, ip_address)
+       VALUES (?, ?, NOW(), ?, ?)`,
+      [reminderId, garageId, userAgent, ip]
+    );
+  } catch (error) {
+    console.error('❌ Failed to log reminder acknowledgement:', error.message);
+  }
+
+  res.send(`
+    <div style="font-family: Arial, sans-serif; padding: 24px;">
+      <h2>Thanks — acknowledgement logged.</h2>
+      <p>You can close this window.</p>
+    </div>
+  `);
+});
+
+
+// ═══════════════════════════════════════════════════════════════
+// QC CHECK — Email tester after QC completion
+// ═══════════════════════════════════════════════════════════════
+app.post('/api/qc-check/:id/email', async (req, res) => {
+  const qcId = req.params.id;
+  const { garage_id, tester_name, vehicle_reg, score, date, group_type } = req.body;
+
+  try {
+    // Look up the tester's email from associated user records
+    const [rows] = await pool.promise().query(
+      `SELECT u.email FROM data_launch_users u
+       JOIN data_launch_tester_records t ON t.user_id = u.id
+       WHERE t.name = ? AND u.garage_id = ? LIMIT 1`,
+      [tester_name, garage_id]
+    );
+
+    if (!rows.length || !rows[0].email) {
+      return res.status(404).json({ error: 'Tester email not found. Please ensure the tester has an email on file.' });
+    }
+
+    const testerEmail = rows[0].email;
+    const scoreColor = score >= 80 ? '#27ae60' : score >= 50 ? '#f39c12' : '#e74c3c';
+    const scoreLabel = score >= 80 ? 'Good Result' : score >= 50 ? 'Needs Improvement' : 'Poor Result';
+
+    // Send email via Brevo
+    if (process.env.BREVO_API_KEY) {
+      const axios = require('axios');
+      await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: 'MOT Compliance Group', email: 'noreply@motcg.co.uk' },
+        to: [{ email: testerEmail, name: tester_name }],
+        subject: `QC Check Results — ${vehicle_reg} — ${date}`,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+            <div style="background:#0068B5;color:#fff;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+              <h1 style="margin:0;font-size:22px;">QC Check Results</h1>
+            </div>
+            <div style="background:#fff;border:1px solid #e5e7eb;padding:24px;border-radius:0 0 8px 8px;">
+              <div style="text-align:center;margin-bottom:24px;">
+                <div style="width:100px;height:100px;border-radius:50%;background:${scoreColor};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;">${score}%</div>
+                <p style="color:${scoreColor};font-weight:700;font-size:18px;margin-top:8px;">${scoreLabel}</p>
+              </div>
+              <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Tester</td><td style="padding:8px;border-bottom:1px solid #eee;">${tester_name}</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Vehicle</td><td style="padding:8px;border-bottom:1px solid #eee;">${vehicle_reg}</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Date</td><td style="padding:8px;border-bottom:1px solid #eee;">${date}</td></tr>
+              </table>
+              <p style="color:#666;font-size:14px;text-align:center;">If you have any questions, please speak with your site manager.</p>
+            </div>
+            <p style="color:#999;font-size:12px;text-align:center;margin-top:16px;">MOT Compliance Group — motcg.co.uk</p>
+          </div>
+        `
+      }, {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Record the email timestamp in the correct table
+    const emailTable = group_type === 'bike'
+      ? 'data_launch_qc_checkers_for_bike'
+      : 'data_launch_qc_checkers_for_car';
+    await pool.promise().query(
+      `UPDATE ${emailTable} SET email_sent_at = NOW() WHERE id = ?`,
+      [qcId]
+    );
+
+    res.json({ success: true, message: 'Email sent to ' + testerEmail });
+  } catch (err) {
+    console.error('QC email error:', err.message);
+    res.status(500).json({ error: 'Failed to send email: ' + err.message });
+  }
+});
+
+
+// ═══════════════════════════════════════════════════════════════
+// SITE AUDIT — Email audit results to garage manager / AE
+// ═══════════════════════════════════════════════════════════════
+app.post('/api/site-audit/:id/email', async (req, res) => {
+  const auditId = req.params.id;
+  const { garage_id, auditor, score, date, fail_count } = req.body;
+
+  try {
+    // Look up the garage's AE (Authorised Examiner) or manager email
+    const [garageRows] = await pool.promise().query(
+      `SELECT trading_name_garage FROM data_launch_garage_records WHERE id = ? LIMIT 1`,
+      [garage_id]
+    );
+    const garageName = garageRows.length ? garageRows[0].trading_name_garage : 'Unknown Garage';
+
+    // Find users with admin/manager role for this garage
+    const [userRows] = await pool.promise().query(
+      `SELECT email, first_name, last_name FROM data_launch_users WHERE garage_id = ? AND email IS NOT NULL AND email != '' LIMIT 5`,
+      [garage_id]
+    );
+
+    if (!userRows.length) {
+      return res.status(404).json({ error: 'No manager email found for this garage.' });
+    }
+
+    const scoreColor = score >= 80 ? '#27ae60' : score >= 50 ? '#f39c12' : '#e74c3c';
+    const scoreLabel = score >= 80 ? 'Compliant' : score >= 50 ? 'Partially Compliant' : 'Non-Compliant';
+    const recipients = userRows.map(u => ({ email: u.email, name: (u.first_name || '') + ' ' + (u.last_name || '') }));
+
+    if (process.env.BREVO_API_KEY) {
+      const axios = require('axios');
+      await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: 'MOT Compliance Group', email: 'noreply@motcg.co.uk' },
+        to: recipients,
+        subject: `Site Audit Results — ${garageName} — ${date}`,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+            <div style="background:#1a7a4c;color:#fff;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
+              <h1 style="margin:0;font-size:22px;">MOT Site Audit Results</h1>
+              <p style="margin:4px 0 0;opacity:0.85;font-size:14px;">${garageName}</p>
+            </div>
+            <div style="background:#fff;border:1px solid #e5e7eb;padding:24px;border-radius:0 0 8px 8px;">
+              <div style="text-align:center;margin-bottom:24px;">
+                <div style="width:100px;height:100px;border-radius:50%;background:${scoreColor};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;">${score}%</div>
+                <p style="color:${scoreColor};font-weight:700;font-size:18px;margin-top:8px;">${scoreLabel}</p>
+              </div>
+              <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Garage</td><td style="padding:8px;border-bottom:1px solid #eee;">${garageName}</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Auditor</td><td style="padding:8px;border-bottom:1px solid #eee;">${auditor}</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Date</td><td style="padding:8px;border-bottom:1px solid #eee;">${date}</td></tr>
+                <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;color:#666;">Non-Compliant Items</td><td style="padding:8px;border-bottom:1px solid #eee;color:${fail_count > 0 ? '#e74c3c' : '#27ae60'};font-weight:700;">${fail_count}</td></tr>
+              </table>
+              ${fail_count > 0 ? '<p style="color:#e74c3c;font-weight:600;font-size:14px;text-align:center;">⚠ Remedial action is required for non-compliant items. Please review the full audit report.</p>' : '<p style="color:#27ae60;font-weight:600;font-size:14px;text-align:center;">✓ All items are compliant. No action required.</p>'}
+              <p style="color:#666;font-size:14px;text-align:center;margin-top:16px;">Log in to MOTCG to view the full audit report and any remedial actions required.</p>
+            </div>
+            <p style="color:#999;font-size:12px;text-align:center;margin-top:16px;">MOT Compliance Group — motcg.co.uk</p>
+          </div>
+        `
+      }, {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+
+    // Record the email timestamp
+    await pool.promise().query(
+      `UPDATE data_launch_mot_site_audits SET email_sent_at = NOW() WHERE id = ?`,
+      [auditId]
+    );
+
+    res.json({ success: true, message: 'Audit email sent to ' + recipients.map(r => r.email).join(', ') });
+  } catch (err) {
+    console.error('Site audit email error:', err.message);
+    res.status(500).json({ error: 'Failed to send email: ' + err.message });
+  }
+});
+
 
 // Function to check if a table is allowed
 const allowedTables = ['testing_station', 'data_launch_garage_records', 'tester_garages', 'data_launch_tester_records', 'data_launch_notes', 'data_launch_mot_equipment', 'data_launch_images', 'data_launch_mot_calibration', 'data_launch_mot_site_audits', 'data_launch_qc_checkers_for_car', 'data_launch_garage_bookings', 'data_launch_defect_reports', 'data_launch_mot_bay_cleaning_log', 'data_launch_tester_training_records', 'data_launch_qc_checkers_for_bike', 'data_launch_users', 'data_launch_garage_reminders', 'data_launch_mot_reconciliations', 'data_launch_special_notices', 'data_launch_special_notices_acknowledgements', 'data_launch_bays', 'data_launch_tqis', 'data_launch_ae_users_accessible_garages']; // Add more tables as needed
@@ -814,9 +1096,29 @@ function isTableAllowed(table) {
 // ============== TEST ENDPOINT FOR EMAIL REMINDERS ==============
 app.get('/api/test-inspection-emails', async (req, res) => {
   console.log('🧪 Manual inspection email test triggered');
+  // simulate=1 sends a single test email without relying on DB data
+  if (req.query.simulate === '1') {
+    const testGarage = {
+      id: 0,
+      reminder_id: 0,
+      trading_name_garage: 'Test Garage',
+      contact_forename_garage: 'Test',
+      contact_email_garage: REMINDER_TEST_EMAIL || 'test@example.com',
+      vts_site_number_garage: 'TEST',
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      reminder_title: 'Calibration Reminder'
+    };
+    const sent = await sendInspectionReminder(testGarage, 30, false);
+    return res.json({
+      message: 'Simulation email attempted',
+      sent,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   const result = await runInspectionReminderJob();
-  res.json({ 
-    message: 'Inspection reminder job completed', 
+  res.json({
+    message: 'Inspection reminder job completed',
     result,
     timestamp: new Date().toISOString()
   });
@@ -933,6 +1235,8 @@ app.get('/api/login/data', (req, res) => {
 })
 
 app.get('/api/:table/data', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
   const { table } = req.params;
   const id = parseInt(req.query.id, 10);
   const garageId = parseInt(req.query.garage_id, 10);
@@ -1732,33 +2036,20 @@ app.listen(port, () => {
 app.post('/logout', (req, res) => {
   console.log("🔹 User requested logout");
 
-  // ✅ Destroy session if applicable
+  // Destroy session if applicable
   if (req.session) {
       req.session.destroy(err => {
           if (err) console.error("⚠️ Error destroying session:", err);
       });
   }
-    pool.getConnection((err, connection) => {
-      if (err) {
-          console.error("⚠️ Error getting database connection:", err);
-          return res.status(500).json({ error: "Database connection error" });
-      }
-      connection.query(query, [table], (error, results) => {
-        connection.release(); // Release the connection back to the pool
-        if (error) {
-          return res.status(500).json({ error });
-        }
-        res.json({ maxId: results[0].maxId });
-      });
-  });
 
-  // ✅ Forcefully clear authToken cookie
+  // Clear authToken cookie
   res.cookie('authToken', '', {
       httpOnly: true,
-      secure: false, // Set to true if using HTTPS
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
       path: '/',
-      expires: new Date(0) // Forces browser to delete immediately
+      expires: new Date(0)
   });
 
   console.log("✅ User logged out. Cookie cleared.");

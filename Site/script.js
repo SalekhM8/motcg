@@ -574,7 +574,7 @@ function showCRUDAlert(message, type) {
         if (user_id) {
           url += `&user_id=${user_id}`
         }
-        const response = await fetch(url);
+        const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) {
             const error = await response.json();
             throw new Error(`Error fetching data: ${error.message}`);

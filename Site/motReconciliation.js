@@ -1,5 +1,3 @@
-console.log('global Option Sets file')
-
 class MOTReconciliation {
     constructor(data, garageId, allTheGarageBookingsData) {
         this.dvsaReport= [];
@@ -16,6 +14,7 @@ class MOTReconciliation {
         this.usingExistingBookingsFromTheSystem = false
         this.existingBookingsFromTheSystemIDS = [];
         this.reconciliationFile = null;
+        this.boundPageClickHandler = null;
         if (allTheGarageBookingsData) {
             this.allTheGarageBookingsData = allTheGarageBookingsData
         }
@@ -28,8 +27,40 @@ class MOTReconciliation {
         document.getElementById('data-launch-side-bar').classList.remove('data-launch-activate-menu')
         this.addListeners()
     }
+    updateInputStateUI () {
+        const bookingSourceEl = document.getElementById('mot-rec-booking-source');
+        const dvsaStateEl = document.getElementById('mot-rec-dvsa-state');
+        const readyEl = document.getElementById('mot-rec-ready-state');
+        if (!bookingSourceEl || !dvsaStateEl || !readyEl) return;
+
+        const usingSystemBookings = this.usingExistingBookingsFromTheSystem === true || Number(this.data?.using_data_launch_booking_data) === 1;
+        const bookingRowsFromArray = Math.max(0, (this.bookingReport?.length || 0) - 1);
+        const bookingRowsFromSavedIds = usingSystemBookings ? (this.existingBookingsFromTheSystemIDS?.length || 0) : 0;
+        const bookingRows = bookingRowsFromArray > 0 ? bookingRowsFromArray : bookingRowsFromSavedIds;
+        const dvsaRows = Math.max(0, (this.dvsaReport?.length || 0) - 1);
+
+        if (usingSystemBookings) {
+            bookingSourceEl.textContent = bookingRows > 0
+                ? `Booking source: System bookings loaded (${bookingRows} rows)`
+                : 'Booking source: System bookings selected';
+        } else if (bookingRows > 0) {
+            bookingSourceEl.textContent = `Booking source: Uploaded booking report (${bookingRows} rows)`;
+        } else {
+            bookingSourceEl.textContent = 'Booking source: Not loaded';
+        }
+
+        dvsaStateEl.textContent = dvsaRows > 0
+            ? `DVSA log loaded (${dvsaRows} rows)`
+            : 'DVSA log: Not loaded';
+
+        const isReadyToCompare = bookingRows > 0 && dvsaRows > 0;
+        readyEl.textContent = isReadyToCompare
+            ? 'Ready to reconcile'
+            : 'Waiting for both booking source and DVSA log';
+        readyEl.classList.toggle('mot-rec-input-state-pill--ready', isReadyToCompare);
+        readyEl.classList.toggle('mot-rec-input-state-pill--waiting', !isReadyToCompare);
+    }
     dataTransformation () {
-        console.log('this.dvsaReport data LIAM HERE ', this.dvsaReport)
         for (let i = 1; i < this.dvsaReport.length; i++) {
 
             for (let key in this.dvsaReport[i]) {
@@ -83,107 +114,187 @@ class MOTReconciliation {
             });
         }
         this.renderHTML(this.dvsaReport)
+    }
+    normalizeReg(val) {
+        return String(val || '').toUpperCase().replace(/\s+/g, '');
+    }
+    parseDurationToSeconds(duration) {
+        const raw = String(duration || '').trim();
+        const parts = raw.split(':').map(Number);
+        if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+        return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+    }
+    getBookingIdsFromRecord() {
+        const rawIds = this.data?.data_launch_booking_data_ids;
+        if (!rawIds) return [];
+        if (Array.isArray(rawIds)) return rawIds.map(id => parseInt(id, 10)).filter(Number.isFinite);
+        if (typeof rawIds === 'string') {
+            try {
+                const parsed = JSON.parse(rawIds);
+                if (Array.isArray(parsed)) return parsed.map(id => parseInt(id, 10)).filter(Number.isFinite);
+            } catch (e) {
+                console.error('Invalid data_launch_booking_data_ids JSON:', rawIds);
+            }
+        }
+        return [];
     }   
     runQuery () {
-        console.log('run query func')
-        console.log('this.dvsaReport BEFORE', this.dvsaReport)
-        console.log('this.bookingReport', this.bookingReport)
-        let bookingsHTML = ``
-        let missingBookingsFromDVSAReport = []
+        let bookingsHTML = ``;
+        let missingBookingsFromDVSAReport = [];
+        const stats = { matched: 0, review: 0, unmatched: 0, unmatchedBooking: 0 };
+        const regCellCache = new Map();
+        const vinCellCache = new Map();
+        const getRegCells = (reg) => {
+            const key = `regNumber_${reg}`;
+            if (!regCellCache.has(key)) {
+                regCellCache.set(key, Array.from(document.getElementsByClassName(key)));
+            }
+            return regCellCache.get(key);
+        };
+        const getVinCells = (vin) => {
+            const key = `vinNumber_${vin}`;
+            if (!vinCellCache.has(key)) {
+                vinCellCache.set(key, Array.from(document.getElementsByClassName(key)));
+            }
+            return vinCellCache.get(key);
+        };
 
-        if (this.data.using_data_launch_booking_data === 1) {
-            this.bookingReport = [{A:'mot_booking_date', B: 'vehicle_reg', C: 'vin'}]
-            if (this.data.data_launch_booking_data_ids) {
+        if (Number(this.data.using_data_launch_booking_data) === 1) {
+            this.bookingReport = [{A:'mot_booking_date', B: 'vehicle_reg', C: 'vin'}];
+            const selectedBookingIds = new Set(this.getBookingIdsFromRecord());
+            if (selectedBookingIds.size > 0 && Array.isArray(this.allTheGarageBookingsData)) {
                 for (let i = 0; i < this.allTheGarageBookingsData.length; i++) {
-                    for (let t = 0; t < this.data.data_launch_booking_data_ids.length; t++) {
-                        if (this.allTheGarageBookingsData[i].id === this.data.data_launch_booking_data_ids[t]) {
-                            let formattedDate = this.formatDate(this.allTheGarageBookingsData[i].booking_date)            
-                            this.bookingReport.push({
-                                A: formattedDate,
-                                B: this.allTheGarageBookingsData[i].vehicle_reg,
-                                C: this.allTheGarageBookingsData[i].vehicle_vin
-                            })
-                        }
-                    }        
+                    if (selectedBookingIds.has(parseInt(this.allTheGarageBookingsData[i].id, 10))) {
+                        let formattedDate = this.formatDate(this.allTheGarageBookingsData[i].booking_date);
+                        this.bookingReport.push({
+                            A: formattedDate,
+                            B: this.allTheGarageBookingsData[i].vehicle_reg || '',
+                            C: this.allTheGarageBookingsData[i].vehicle_vin || ''
+                        });
+                    }
                 }
                 if (this.bookingReport.length > 1) {
-                    document.getElementById("data-launch-existing-bookings-tick-element").classList.remove('data-launch-inactive')
-                    this.showCRUDAlert('Successfully Retrieved Booking Records', 'success')
+                    document.getElementById("data-launch-existing-bookings-tick-element")?.classList.remove('data-launch-inactive');
+                    this.showCRUDAlert('Successfully Retrieved Booking Records', 'success');
+                } else {
+                    this.showCRUDAlert('Error retrieving booking records \n Please contact your administrator ', 'error');
                 }
-                else {
-                    this.showCRUDAlert('Error retrieving booking records \n Please contact your administrator ', 'error')
-                }                
             }
         }
-        
-        for (let i = 1; i < this.dvsaReport.length; i++) {
-            this.dvsaReport[i].match = false
-            ///// matching the rows with TEST TYPE of 'Normal Test' && the Test duration is LESS THAN 25 mins
-            if (this.dvsaReport[i].J === 'Normal Test' && this.dvsaReport[i].M < '00:25:00') {                  
-                let x = Array.from(document.getElementsByClassName(`vinNumber_${this.dvsaReport[i].E}`))
-                x.forEach(el => {
-                    /// color of amber
-                    el.style.backgroundColor = '#ffbf00'
-                })
-                this.dvsaReport[i].match = true
-            }
-            ///// matching the rows with TEST TYPE of 'Re-Test' && the Test duration is LESS THAN 3 mins
-            if (this.dvsaReport[i].J === 'Re-Test' && this.dvsaReport[i].M < '00:03:00') {                 
-                let x = Array.from(document.getElementsByClassName(`vinNumber_${this.dvsaReport[i].E}`))
-                x.forEach(el => {
-                    /// color of amber
-                    el.style.backgroundColor = '#ffbf00'
-                })
-                this.dvsaReport[i].match = true
-            }
-            ///// rows that do NOT have a matching ip address
-            if (this.dvsaReport[i].T !== this.dvsaReport[i].U) {
-                let x = Array.from(document.getElementsByClassName(`vinNumber_${this.dvsaReport[i].E}`))
-                x.forEach(el => {
-                    /// color of light blue
-                    el.style.backgroundColor = '#ADD8E6'
-                })
-                this.dvsaReport[i].match = true
-            }
-        }
+
+        const bookingRegs = new Set();
+        const bookingVins = new Set();
         for (let t = 1; t < this.bookingReport.length; t++) {
-            this.bookingReport[t].match = false
+            this.bookingReport[t].match = false;
+            bookingRegs.add(this.normalizeReg(this.bookingReport[t].B));
+            if (this.bookingReport[t].C) bookingVins.add(String(this.bookingReport[t].C).trim());
+        }
+
+        for (let i = 1; i < this.dvsaReport.length; i++) {
+            const row = this.dvsaReport[i];
+            if (!row) continue;
+            row.match = false;
+            row.matchStatus = 'unmatched';
+            row.matchReason = 'No booking match';
+
+            const durationSeconds = this.parseDurationToSeconds(row.M);
+            const isNormalShort = row.J === 'Normal Test' && durationSeconds !== null && durationSeconds < (25 * 60);
+            const isRetestShort = row.J === 'Re-Test' && durationSeconds !== null && durationSeconds < (3 * 60);
+            const hasIpMismatch = String(row.T || '').trim() !== String(row.U || '').trim();
+
+            if (isNormalShort || isRetestShort) {
+                row.match = true;
+                row.matchStatus = 'review';
+                row.matchReason = 'Short duration';
+            }
+            if (hasIpMismatch) {
+                row.match = true;
+                row.matchStatus = 'review';
+                row.matchReason = 'IP mismatch';
+            }
+
+            const regMatch = bookingRegs.has(this.normalizeReg(row.D));
+            const vinMatch = row.E && bookingVins.has(String(row.E).trim());
+            if (regMatch || vinMatch) {
+                row.match = true;
+                row.matchStatus = 'matched';
+                row.matchReason = regMatch && vinMatch ? 'Reg+VIN match' : (regMatch ? 'Reg match' : 'VIN match');
+            }
+
+            const rowEls = getRegCells(row.D);
+            rowEls.forEach((el) => {
+                if (row.matchStatus === 'matched') {
+                    el.style.backgroundColor = '#75b798';
+                } else if (row.matchStatus === 'review') {
+                    el.style.backgroundColor = '#ffbf00';
+                } else {
+                    el.style.backgroundColor = 'red';
+                }
+            });
+
+            const vinEls = getVinCells(row.E);
+            vinEls.forEach((el) => {
+                if (row.matchStatus === 'matched') {
+                    el.style.backgroundColor = '#75b798';
+                } else if (row.matchStatus === 'review') {
+                    el.style.backgroundColor = hasIpMismatch ? '#ADD8E6' : '#ffbf00';
+                } else {
+                    el.style.backgroundColor = 'red';
+                }
+            });
+
+            const rowContainer = document.querySelector(`#reconciliationTableBody tr.data-row[data-export-row="${i - 1}"]`);
+            if (rowContainer) {
+                rowContainer.dataset.matchStatus = row.matchStatus;
+                rowContainer.dataset.matchReason = row.matchReason;
+                rowContainer.classList.remove('mot-rec-row--matched', 'mot-rec-row--review', 'mot-rec-row--unmatched');
+                rowContainer.classList.add(`mot-rec-row--${row.matchStatus}`);
+                const statusCell = rowContainer.querySelector('.mot-rec-status-cell');
+                const reasonCell = rowContainer.querySelector('.mot-rec-reason-cell');
+                if (statusCell) {
+                    const statusText = row.matchStatus === 'matched'
+                        ? 'Matched'
+                        : row.matchStatus === 'review'
+                            ? 'Needs Review'
+                            : 'Missing From Diary';
+                    statusCell.textContent = statusText;
+                    statusCell.setAttribute('data-export-val', statusText);
+                    statusCell.classList.remove('status-matched', 'status-review', 'status-unmatched');
+                    statusCell.classList.add(`status-${row.matchStatus}`);
+                }
+                if (reasonCell) {
+                    reasonCell.textContent = row.matchReason || '';
+                    reasonCell.setAttribute('data-export-val', row.matchReason || '');
+                }
+            }
+
+            if (!row.match) {
+                const missingAlertEl = document.getElementById(`${row.D}_${row.E}_missingFromAlert`);
+                if (missingAlertEl) {
+                    missingAlertEl.innerHTML = 'Missing from Booking Diary';
+                }
+                this.redValues.push(`regNumber_${row.D}`);
+            }
+            if (row.matchStatus === 'matched') stats.matched++;
+            else if (row.matchStatus === 'review') stats.review++;
+            else stats.unmatched++;
+        }
+
+        for (let t = 1; t < this.bookingReport.length; t++) {
+            const bReg = this.normalizeReg(this.bookingReport[t].B);
+            const bVin = String(this.bookingReport[t].C || '').trim();
             for (let i = 1; i < this.dvsaReport.length; i++) {
-                /// matching the REG Number from each uploaded report
-                if (this.dvsaReport[i].D.toUpperCase() === this.bookingReport[t].B.toUpperCase()) {                
-                    let x = Array.from(document.getElementsByClassName(`regNumber_${this.dvsaReport[i].D}`))
-                    x.forEach(el => {
-                        el.style.backgroundColor = '#75b798'
-                    })
-                    this.bookingReport[t].match = true
-                    this.dvsaReport[i].match = true
+                const row = this.dvsaReport[i];
+                if (!row) continue;
+                if (this.normalizeReg(row.D) === bReg || (bVin && String(row.E || '').trim() === bVin)) {
+                    this.bookingReport[t].match = true;
+                    break;
                 }
-                ///// matching the VIN (Chassis Number) from each uploaded report
-                if (this.dvsaReport[i].E === this.bookingReport[t].C) {                
-                    let x = Array.from(document.getElementsByClassName(`vinNumber_${this.dvsaReport[i].E}`))
-                    x.forEach(el => {
-                        el.style.backgroundColor = '#75b798'
-                    })
-                    this.bookingReport[t].match = true
-                    this.dvsaReport[i].match = true
-                }    
             }
-        }
-        for (let i = 1; i < this.dvsaReport.length; i++) {
-            if (this.dvsaReport[i].match === false) {
-                document.getElementById(`${this.dvsaReport[i].D}_${this.dvsaReport[i].E}_missingFromAlert`).innerHTML = 'Missing from Booking Diary'
-                let x = Array.from(document.getElementsByClassName(`regNumber_${this.dvsaReport[i].D}`))
-                this.redValues.push(`regNumber_${this.dvsaReport[i].D}`)
-                    x.forEach(el => {
-                        el.style.backgroundColor = 'red'
-                    })
-            }
-        }
-        for (let t = 1; t < this.bookingReport.length; t++) {
             if (this.bookingReport[t].match === false) {
-                missingBookingsFromDVSAReport.push(this.bookingReport[t])
-                let data = this.tableHeaders
-                bookingsHTML += `<tr class="export-row" data-export-row="${this.exportRow}">
+                missingBookingsFromDVSAReport.push(this.bookingReport[t]);
+                let data = this.tableHeaders;
+                bookingsHTML += `<tr class="export-row data-row mot-rec-row--unmatched-booking" data-match-status="unmatched-booking" data-export-row="${this.exportRow}">
                                 <td class="export-record" data-export-header="${data[0].A}" style="background-color: red"  data-export-row="${this.exportRow}" data-export-val=""></td>
                                 <td class="export-record" data-export-header="${data[0].B}" style="background-color: red"  data-export-row="${this.exportRow}" data-export-val=""></td>
                                 <td class="export-record" data-export-header="${data[0].C}" style="background-color: red"  data-export-row="${this.exportRow}"  data-export-val=""></td>
@@ -213,23 +324,32 @@ class MOTReconciliation {
                                 <td class="export-record" data-export-header="${data[0].AA}" style="background-color: red"  data-export-row="${this.exportRow}"  data-export-val=""></td>
                                 <td class="export-record" data-export-header="${data[0].AB}" style="background-color: red"  data-export-row="${this.exportRow}"  data-export-val=""></td>
                                 <td class="export-record" data-export-header="${data[0].AC}" style="background-color: red"  data-export-row="${this.exportRow}"  data-export-val=""></td>
-                            </tr>`
-                            this.exportRow++
+                                <td class="mot-rec-status-cell export-record status-unmatched-booking" data-export-header="Reconciliation Status" data-export-row="${this.exportRow}" data-export-val="Missing From DVSA">Missing From DVSA</td>
+                                <td class="mot-rec-reason-cell export-record" data-export-header="Reason" data-export-row="${this.exportRow}" data-export-val="Booking found in system but not in DVSA log">Booking found in system but not in DVSA log</td>
+                            </tr>`;
+                this.exportRow++;
+                stats.unmatchedBooking++;
             }
         }
-        document.getElementById('reconciliationTableBody').innerHTML += bookingsHTML  
-        console.log('this.dvsaReport AFTER', this.dvsaReport)
-        console.log('missingBookingsFromDVSAReport', missingBookingsFromDVSAReport)
 
-        console.log('this.redValues', this.redValues)
-        ///// has the reconciliation record been submitted already ???
-        ////// IF IT HAS , then we need to remove the functionality from being able to modify this record any further
-        if (this.data.status === 1) {
-            // document.getElementById('xpg_uploadFile1Btn').classList.add('data-launch-inactive')
-            // document.getElementById('xpg_uploadFile2Btn').classList.add('data-launch-inactive')
-            document.getElementById('data-launch-mot-reconciliation-save-button').classList.add('data-launch-inactive')   
-            document.getElementById('data-launch-mot-reconciliation-submit-button').classList.add('data-launch-inactive')
-        }        
+        const tbody = document.getElementById('reconciliationTableBody');
+        if (tbody) {
+            tbody.innerHTML += bookingsHTML;
+        }
+        const setCount = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(value);
+        };
+        setCount('mot-rec-matched-count', stats.matched);
+        setCount('mot-rec-review-count', stats.review);
+        setCount('mot-rec-unmatched-count', stats.unmatched);
+        setCount('mot-rec-unmatched-booking-count', stats.unmatchedBooking);
+        this.updateInputStateUI();
+
+        if (Number(this.data.status) === 1) {
+            document.getElementById('data-launch-mot-reconciliation-save-button')?.classList.add('data-launch-inactive');
+            document.getElementById('data-launch-mot-reconciliation-submit-button')?.classList.add('data-launch-inactive');
+        }
     }    
     // onlyShowRed () {
     //     let x = Array.from(document.getElementsByClassName('data-row'))
@@ -246,13 +366,36 @@ class MOTReconciliation {
     onlyShowRed() {
         const rows = document.querySelectorAll('.data-row');
         rows.forEach(row => {
-            let keepRow = false;
-            row.querySelectorAll('td').forEach(cell => {
-                const bg = window.getComputedStyle(cell).backgroundColor;
-                if (bg === 'rgb(255, 0, 0)' || bg.toLowerCase() === '#ff0000') {
-                    keepRow = true;
-                }
-            });
+            const status = String(row.dataset.matchStatus || '').toLowerCase();
+            const statusCell = row.querySelector('.mot-rec-status-cell');
+            const statusText = String(statusCell?.textContent || '').toLowerCase();
+            const reasonCell = row.querySelector('.mot-rec-reason-cell');
+            const reasonText = String(reasonCell?.textContent || '').toLowerCase();
+            const rowText = String(row.textContent || '').toLowerCase();
+
+            let keepRow =
+                status === 'unmatched' ||
+                status === 'unmatched-booking' ||
+                row.classList.contains('mot-rec-row--unmatched') ||
+                row.classList.contains('mot-rec-row--unmatched-booking') ||
+                statusText.includes('missing from') ||
+                reasonText.includes('missing') ||
+                rowText.includes('missing from booking diary') ||
+                rowText.includes('missing from dvsa');
+
+            // Fallback for older saved tables with no status metadata.
+            if (!keepRow) {
+                row.querySelectorAll('td').forEach(cell => {
+                    const bg = window.getComputedStyle(cell).backgroundColor;
+                    if (
+                        bg === 'rgb(255, 0, 0)' ||
+                        bg === 'rgb(255, 241, 243)' ||
+                        bg === 'rgb(254, 242, 242)'
+                    ) {
+                        keepRow = true;
+                    }
+                });
+            }
             if (keepRow) {
                 row.classList.remove('data-launch-inactive');
             } else {
@@ -272,82 +415,175 @@ class MOTReconciliation {
         let millisecondsPerDay = 24 * 60 * 60 * 1000;
         return new Date(excelStart.getTime() + serial * millisecondsPerDay).toLocaleDateString('en-GB');
     }
+    normalizeHeaderName(val) {
+        return String(val || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+    }
+    getDvsaSchema() {
+        return [
+            { key: 'A', label: 'Site Number', aliases: ['sitenumber', 'site'] },
+            { key: 'B', label: 'Test date/time', aliases: ['testdatetime', 'testdate', 'testdateandtime'] },
+            { key: 'C', label: 'Test Number', aliases: ['testnumber'] },
+            { key: 'D', label: 'Registration', aliases: ['registration', 'vehicleregistration', 'vehiclereg'] },
+            { key: 'E', label: 'VIN', aliases: ['vin', 'vehiclevin'] },
+            { key: 'F', label: 'Make', aliases: ['make', 'vehiclemake'] },
+            { key: 'G', label: 'Model', aliases: ['model', 'vehiclemodel'] },
+            { key: 'H', label: 'Class', aliases: ['class', 'vehicleclass'] },
+            { key: 'I', label: 'User Id', aliases: ['userid', 'testerid', 'user'] },
+            { key: 'J', label: 'Test type', aliases: ['testtype'] },
+            { key: 'K', label: 'Result', aliases: ['result', 'testresult'] },
+            { key: 'L', label: 'Reason for aborting', aliases: ['reasonforaborting', 'abortreason'] },
+            { key: 'M', label: 'Test Duration', aliases: ['testduration', 'duration'] },
+            { key: 'N', label: 'Tester who recorded test', aliases: ['testerwhorecordedtest', 'testerwhorecordedcttest'] },
+            { key: 'O', label: 'Date/time of recording CT test', aliases: ['datetimeofrecordingcttest', 'recordingcttestdatetime'] },
+            { key: 'P', label: 'Contingency Test Reason', aliases: ['contingencytestreason'] },
+            { key: 'Q', label: 'Contingency Code', aliases: ['contingencycode'] },
+            { key: 'R', label: 'Login type at start', aliases: ['logintypeatstart'] },
+            { key: 'S', label: 'Login type at completion', aliases: ['logintypeatcompletion'] },
+            { key: 'T', label: 'Client IP address at start', aliases: ['clientipaddressatstart', 'ipstart'] },
+            { key: 'U', label: 'Client IP address at completion', aliases: ['clientipaddressatcompletion', 'ipcompletion'] },
+            { key: 'V', label: 'Browser agent at start', aliases: ['browseragentatstart'] },
+            { key: 'W', label: 'Browser agent at completion', aliases: ['browseragentatcompletion'] },
+            { key: 'X', label: 'Cookie code at start', aliases: ['cookiecodeatstart'] },
+            { key: 'Y', label: 'Cookie code at completion', aliases: ['cookiecodeatcompletion'] },
+            { key: 'Z', label: 'Brake Test Type', aliases: ['braketesttype'] },
+            { key: 'AA', label: 'Entry Type', aliases: ['entrytype'] },
+            { key: 'AB', label: 'Emissions Type', aliases: ['emissionstype', 'emissiontype'] },
+            { key: 'AC', label: 'Entry Type', aliases: ['entrytype2', 'entrytypeb'] }
+        ];
+    }
+    getBookingSchema() {
+        return [
+            { key: 'A', label: 'mot_booking_date', aliases: ['motbookingdate', 'bookingdate', 'date'] },
+            { key: 'B', label: 'vehicle_reg', aliases: ['vehiclereg', 'registration', 'vehicleregistration'] },
+            { key: 'C', label: 'vin', aliases: ['vin', 'vehiclevin'] }
+        ];
+    }
+    scoreSheetAgainstSchema(rows, schema) {
+        if (!rows || rows.length === 0) return 0;
+        const headerRow = rows[0] || {};
+        let score = 0;
+        Object.keys(headerRow).forEach((col) => {
+            if (col === '__rowNum__') return;
+            const normalized = this.normalizeHeaderName(headerRow[col]);
+            if (!normalized) return;
+            const match = schema.find((item) => item.aliases.includes(normalized));
+            if (match) score++;
+        });
+        return score;
+    }
+    pickBestSheet(workbook, schema) {
+        let best = { score: -1, rows: [], sheetName: '' };
+        workbook.SheetNames.forEach((sheetName) => {
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false, defval: '', header: 'A' });
+            const score = this.scoreSheetAgainstSchema(rows, schema);
+            if (score > best.score) {
+                best = { score, rows, sheetName };
+            }
+        });
+        return best;
+    }
+    mapRowsBySchema(rows, schema) {
+        const headerRow = rows[0] || {};
+        const canonicalToColumn = {};
+        Object.keys(headerRow).forEach((col) => {
+            if (col === '__rowNum__') return;
+            const normalized = this.normalizeHeaderName(headerRow[col]);
+            const match = schema.find((item) => item.aliases.includes(normalized));
+            if (match && !canonicalToColumn[match.key]) {
+                canonicalToColumn[match.key] = col;
+            }
+        });
+
+        const output = [];
+        const outHeader = {};
+        schema.forEach((item) => {
+            outHeader[item.key] = item.label;
+        });
+        output.push(outHeader);
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i] || {};
+            const mappedRow = {};
+            schema.forEach((item) => {
+                const sourceCol = canonicalToColumn[item.key];
+                let value = sourceCol ? row[sourceCol] : '';
+                if (value === undefined || value === null) value = '';
+                mappedRow[item.key] = value;
+            });
+            output.push(mappedRow);
+        }
+
+        return {
+            mappedRows: output,
+            mappedFieldCount: Object.keys(canonicalToColumn).length
+        };
+    }
     parseExcel (file, num) {
-        console.log('LIAM LOOK HERE 3', file)
         var reader = new FileReader();
-        console.log('whats ths file obj ? ', file)
         reader.onload = (e) => {
           var data = e.target.result;
-        //   var workbook = XLSX.read(data, {
-        //     type: 'binary'
-        //   });
-        var workbook = XLSX.read(data, {
-            type: 'binary',
-            cellDates: true,   // prefer Date objects
-            raw: false,        // parse into types (not raw strings)
-            dateNF: 'yyyy-mm-dd hh:mm:ss' // fallback formatting
-        });
-          workbook.SheetNames.forEach(sheetName => {
-            // https://docs.sheetjs.com/#json
-             console.log('liam here 5 ', workbook.Sheets[sheetName])
-             console.log('liam here 6 ', sheetName)
-            // var XL_row_object = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: "A", defval: ""});
-            var XL_row_object = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false, defval: null, header: "A"});
-            console.log('liam here 7 ', XL_row_object)
-            XL_row_object.forEach((row, rowIndex) => {
-                Object.keys(row).forEach(column => {
-                    if (row[column] === undefined || row[column] === null) {
-                        row[column] = ''; // Replace undefined/null with an empty string
-                    }
-                });
-            });
-          console.log('XL_row_object.length', XL_row_object.length)
-        //   totalLength = XL_row_object.length
-          if (num === '1') {
-             this.bookingReportMounted = true
-             this.bookingReport = XL_row_object
-             this.bookingReport.forEach(row => {
-                if (!isNaN(row.A)) {  // Check if mot_booking_date is a number
-                    row.A = this.excelSerialToJSDate(row.A); // Convert it to a real date
-                }
-            });
-            
-             console.log('this.bookingReport data is', this.bookingReport)
-             document.getElementById("data-launch-booking-report-tick-element").classList.remove('data-launch-inactive')
-             document.getElementById("bookingReportFileName").innerHTML = file.name
-             if (document.getElementById('data-launch-upload-file-2-initial-wizard-button')){
-                document.getElementById('data-launch-upload-file-2-initial-wizard-button').classList.remove('not-ready-yet')
-             }      
+          var workbook = XLSX.read(data, {
+              type: 'binary',
+              cellDates: true,
+              raw: false,
+              dateNF: 'yyyy-mm-dd hh:mm:ss'
+          });
+
+          const targetIsBooking = num === '1';
+          const schema = targetIsBooking ? this.getBookingSchema() : this.getDvsaSchema();
+          const threshold = targetIsBooking ? 2 : 8;
+          const picked = this.pickBestSheet(workbook, schema);
+
+          if (!picked.rows || picked.rows.length === 0) {
+              this.showCRUDAlert('Uploaded file appears empty.', 'error');
+              return;
           }
-          if (num === '2') {
-              this.dvsaReport = XL_row_object
-              console.log('this.dvsaReport LIAM WHAT IS GOING ON WITH THE DATA HERE ???', this.dvsaReport)
-              this.dvsaReport.forEach(row => {
-                if (!isNaN(row.B)) {  // Check if mot_booking_date is a number
-                    row.B = this.excelSerialToJSDate(row.B); // Convert it to a real date
-                }
-            });
-              this.dvsaReportMounted = true
-              document.getElementById("data-launch-dvsa-report-tick-element").classList.remove('data-launch-inactive')
-              document.getElementById("dvsaReportFileName").innerHTML = file.name
+
+          const mapped = this.mapRowsBySchema(picked.rows, schema);
+          if (mapped.mappedFieldCount < threshold) {
+              this.showCRUDAlert(
+                  `Could not identify a valid ${targetIsBooking ? 'Booking' : 'DVSA'} sheet. Please check headers.`,
+                  'error'
+              );
+              return;
+          }
+
+          if (targetIsBooking) {
+              this.bookingReportMounted = true;
+              this.bookingReport = mapped.mappedRows;
+              this.bookingReport.forEach((row) => {
+                  if (!isNaN(row.A)) {
+                      row.A = this.excelSerialToJSDate(row.A);
+                  }
+              });
+              document.getElementById("data-launch-booking-report-tick-element").classList.remove('data-launch-inactive');
+              document.getElementById("bookingReportFileName").innerHTML = `${file.name} (${picked.sheetName})`;
+              if (document.getElementById('data-launch-upload-file-2-initial-wizard-button')) {
+                  document.getElementById('data-launch-upload-file-2-initial-wizard-button').classList.remove('not-ready-yet');
+              }
+          } else {
+              this.dvsaReport = mapped.mappedRows;
+              this.dvsaReport.forEach((row) => {
+                  if (!isNaN(row.B)) {
+                      row.B = this.excelSerialToJSDate(row.B);
+                  }
+              });
+              this.dvsaReportMounted = true;
+              document.getElementById("data-launch-dvsa-report-tick-element").classList.remove('data-launch-inactive');
+              document.getElementById("dvsaReportFileName").innerHTML = `${file.name} (${picked.sheetName})`;
           }
 
           if (this.dvsaReportMounted === true) {
-            this.dataTransformation()
+              this.dataTransformation();
           }
-        
-          //   XL_row_object.forEach(
-  
-          //     function(i, num) {
-          //       buildDataObject(i, num)
-          //     }
-  
-          //   );  // end forEach on XL_row_object          
-          });
+          this.updateInputStateUI();
         };
   
         reader.onerror = function(ex) {
-          console.log(ex);
+          console.error(ex);
         };
   
         reader.readAsBinaryString(file);
@@ -378,46 +614,59 @@ class MOTReconciliation {
             this.redValues = []
             this.bookingReportMounted = false
             this.dvsaReportMounted = false
+            this.usingExistingBookingsFromTheSystem = this.data.using_data_launch_booking_data === 1
+            this.existingBookingsFromTheSystemIDS = this.getBookingIdsFromRecord()
         }
-        console.log('mot Reconciliation ID  >> THIS.data' , this.data)  
         let html = `
-        <div class='container-fluid'>
+        <div class='container-fluid mot-rec-page'>
             <div class="data-launch-crud-security-alert" id="data-launch-crud-alert-box-mot-reconciliations">
                 <div class="data-launch-crud-security-alert__icon" id="data-launch-crud-alert-icon-mot-reconciliations"></div>
                 <div class="data-launch-crud-security-alert__message" id="data-launch-crud-alert-message-mot-reconciliations"></div>
             </div>
-            <button type="button" id="data-launch-mot-reconciliation-back-to-garage-view" class="btn btn-outline-primary btn-primary data-launch-mot-reconciliation-back-to-garage-view">< < Back To Garage</button>
+            <button type="button" id="data-launch-mot-reconciliation-back-to-garage-view" class="btn btn-outline-primary btn-primary data-launch-mot-reconciliation-back-to-garage-view"><i class="bi bi-arrow-left"></i> Back To Garage</button>
             <div class='data-launch-mot-reconciliation-header-tick-containers'>
                 <div class='data-launch-booking-report-tick-container' id='data-launch-booking-report-tick-container'>
                     <i id="data-launch-booking-report-tick-element" class="bi bi-check-circle data-launch-inactive"></i>
-                    <h4 id="bookingReportFileName"></h4>                    
+                    <h4 id="bookingReportFileName">Booking Report</h4>
                 </div>
                  <div class='data-launch-booking-report-tick-container' id='data-launch-existing-bookings-tick-container'>
-                    <i id="data-launch-existing-bookings-tick-element" class="bi bi-check-circle data-launch-inactive"></i>                  
+                    <i id="data-launch-existing-bookings-tick-element" class="bi bi-check-circle data-launch-inactive"></i>
+                    <h4>System Bookings</h4>
                 </div>
                 <div class='data-launch-booking-report-tick-container' id='data-launch-dvsa-report-tick-container'>
                     <i id='data-launch-dvsa-report-tick-element' class="bi bi-check-circle data-launch-inactive"></i>
-                    <h4 id="dvsaReportFileName"></h4>
+                    <h4 id="dvsaReportFileName">DVSA Log</h4>
                 </div>
             </div>
             <div class="data-launch-mot-reconciliation-meta">
-                <button class='btn btn-warning data-launch-mot-reconciliation-table-controls-buttons data-launch-no-click' id='data-launch-mot-reconciliation-month'>Month: <span id="mot_reconciliation_month">${this.data.month}</span></button>
-                <button class='btn btn-warning data-launch-mot-reconciliation-table-controls-buttons data-launch-no-click' id='data-launch-mot-reconciliation-year'>Year: <span id="mot_reconciliation_year">${this.data.year}</span></button>
-                <button style="${this.data.status === 1 ? 'background-color: #17b117; color: #ffffff' : ''}" class='btn btn-warning data-launch-mot-reconciliation-table-controls-buttons data-launch-no-click' id='data-launch-mot-reconciliation-year'>Status: <span id="mot_reconciliation_status">${this.data.status === 1 ? 'Submitted': 'Draft'}</span></button>
+                <button class='btn btn-warning data-launch-mot-reconciliation-table-controls-buttons data-launch-no-click mot-rec-pill' id='data-launch-mot-reconciliation-month'>Month: <span id="mot_reconciliation_month">${this.data.month}</span></button>
+                <button class='btn btn-warning data-launch-mot-reconciliation-table-controls-buttons data-launch-no-click mot-rec-pill' id='data-launch-mot-reconciliation-year'>Year: <span id="mot_reconciliation_year">${this.data.year}</span></button>
+                <button class='btn btn-warning data-launch-mot-reconciliation-table-controls-buttons data-launch-no-click mot-rec-pill ${Number(this.data.status) === 1 ? 'mot-rec-pill--submitted' : 'mot-rec-pill--draft'}' id='data-launch-mot-reconciliation-status-btn'>Status: <span id="mot_reconciliation_status">${Number(this.data.status) === 1 ? 'Submitted': 'Draft'}</span></button>
                 <div class='data-launch-mot-reconciliation-table-controls-container'>
-                    <button class="btn btn-primary data-launch-mot-reconciliation-save-button data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive" style="background-color:rgb(136, 223, 14); color: black; letter-spacing: 1.8px; padding: 5px 10px;" id="data-launch-mot-reconciliation-save-button">Save</button>
-                    <button class='btn btn-warning data-launch-export-all-records data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive' id='data-launch-mot-reconciliation-export-all'>Export All Records<i class="bi bi-filetype-xls data-launch-export-all-records data-launch-inactive"></i></button>
-                    <button class='btn btn-warning data-launch-only-show-red data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive' id='data-launch-mot-reconciliation-red-only'>Red Only</button>
-                    <button class='btn btn-warning data-launch-show-all data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive' id='data-launch-mot-reconciliation-show-all'>Show All Rows</button>                
+                    <button class="btn btn-primary data-launch-mot-reconciliation-save-button data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive mot-rec-btn mot-rec-btn--save" id="data-launch-mot-reconciliation-save-button"><i class="bi bi-floppy"></i> Save</button>
+                    <button class='btn btn-warning data-launch-export-all-records data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive mot-rec-btn mot-rec-btn--ghost' id='data-launch-mot-reconciliation-export-all'><i class="bi bi-file-earmark-arrow-down"></i> Export</button>
+                    <button class='btn btn-warning data-launch-only-show-red data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive mot-rec-btn mot-rec-btn--danger' id='data-launch-mot-reconciliation-red-only'>Red Only</button>
+                    <button class='btn btn-warning data-launch-show-all data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive mot-rec-btn mot-rec-btn--ghost' id='data-launch-mot-reconciliation-show-all'>Show All</button>
                 </div>
-                <button class="btn btn-primary data-launch-mot-reconciliation-submit-button data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive" style="background-color:rgb(103 232 24); color: black; letter-spacing: 1.8px; padding: 5px 10px; float:right;" id="data-launch-mot-reconciliation-submit-button">Submit Reconciliation</button>
+                <button class="btn btn-primary data-launch-mot-reconciliation-submit-button data-launch-mot-reconciliation-table-controls-buttons data-launch-inactive mot-rec-btn mot-rec-btn--submit" id="data-launch-mot-reconciliation-submit-button"><i class="bi bi-send-check"></i> Submit Reconciliation</button>
             </div>
             <div class='data-launch-mot-reconciliation-header'>
-                <button class="btn btn-primary data-launch-upload-booking-report-btn data-launch-upload-file-1" style="background-color: #f39c12; color: black; font-weight: bold; letter-spacing: 1.8px; padding: 5px 10px; width: 33%;" id="xpg_uploadFile1Btn">Upload Booking Report</button>
-                 <button class='btn btn-primary data-launch-mot-reconciliation-import-garage-boooking-reports-from-data-launch-system' style="width: 32%; height: 38px;" id='data-launch-mot-reconciliation-import-garage-boooking-reports-from-data-launch-system'>Use Booking Records From This System</button>
-                <button class="btn btn-primary data-launch-upload-booking-report-btn data-launch-upload-file-2" style="background-color: #f39c12; color: black; font-weight: bold; letter-spacing: 1.8px; padding: 5px 10px; width: 33%;" id="xpg_uploadFile2Btn">Upload DVSA Log</button><br>
+                <button class="btn btn-primary data-launch-upload-booking-report-btn data-launch-upload-file-1 mot-rec-btn mot-rec-btn--upload" id="xpg_uploadFile1Btn"><i class="bi bi-file-earmark-spreadsheet"></i> Upload Booking Report</button>
+                 <button class='btn btn-primary data-launch-mot-reconciliation-import-garage-boooking-reports-from-data-launch-system mot-rec-btn mot-rec-btn--primary' id='data-launch-mot-reconciliation-import-garage-boooking-reports-from-data-launch-system'><i class="bi bi-database-check"></i> Use System Bookings</button>
+                <button class="btn btn-primary data-launch-upload-booking-report-btn data-launch-upload-file-2 mot-rec-btn mot-rec-btn--upload" id="xpg_uploadFile2Btn"><i class="bi bi-cloud-upload"></i> Upload DVSA Log</button><br>
                 <input type="file" id="fileInput_bookingReport_${this.garageId}" name="file" required hidden />
                 <input type="file" id="fileInput_dvsaReport_${this.garageId}" name="file" required hidden />
+            </div>
+            <div class="mot-rec-input-state" id="mot-rec-input-state">
+                <span class="mot-rec-input-state-pill" id="mot-rec-booking-source">Booking source: Not loaded</span>
+                <span class="mot-rec-input-state-pill" id="mot-rec-dvsa-state">DVSA log: Not loaded</span>
+                <span class="mot-rec-input-state-pill mot-rec-input-state-pill--waiting" id="mot-rec-ready-state">Waiting for both booking source and DVSA log</span>
+            </div>
+            <div class="mot-rec-summary" id="mot-rec-summary">
+                <div class="mot-rec-summary-card"><span class="mot-rec-summary-label">Matched</span><span class="mot-rec-summary-value" id="mot-rec-matched-count">0</span></div>
+                <div class="mot-rec-summary-card"><span class="mot-rec-summary-label">Needs Review</span><span class="mot-rec-summary-value" id="mot-rec-review-count">0</span></div>
+                <div class="mot-rec-summary-card"><span class="mot-rec-summary-label">Missing From Diary</span><span class="mot-rec-summary-value" id="mot-rec-unmatched-count">0</span></div>
+                <div class="mot-rec-summary-card"><span class="mot-rec-summary-label">Missing From DVSA</span><span class="mot-rec-summary-value" id="mot-rec-unmatched-booking-count">0</span></div>
             </div>        
                          
             <div class="data-launch-mot-reconciliation-data-query-table" id="motExpertHTML"></div>
@@ -428,6 +677,7 @@ class MOTReconciliation {
         `
         document.getElementById('motReconciliationsPage').innerHTML = html
         this.injectExistingRecordValues()
+        this.updateInputStateUI()
     }
     showRowContextMenu(event) {
         // event.preventDefault();
@@ -551,7 +801,6 @@ renderFromReconciliationFile(fileRecord) {
         .then(workbook => {
             const ws = workbook.worksheets[0];
             let html = `<table class='table'><thead><tr>`;
-            console.log('ws',ws)
             // Headers
             // ws.columns.forEach(col => {
             //     html += `<th>${col.header}</th>`;
@@ -686,10 +935,8 @@ renderFromReconciliationFile(fileRecord) {
 
 
     fetchFile = (fileUrl, num, fileRecord) => {
-        console.log('fetchFile called with:', fileUrl);
     
         let fileName = fileRecord.name;
-        console.log('MOT RECONCILIATION fileName is ', fileName);
     
         // Get pre-signed URL as a promise
         getImageDocUrl(fileName)
@@ -698,7 +945,6 @@ renderFromReconciliationFile(fileRecord) {
                     throw new Error('Failed to generate a fresh pre-signed URL.');
                 }
     
-                console.log('Using fresh pre-signed URL:', signedUrl);
     
                 // Fetch the file using the signed URL
                 return fetch(`/fetch-file?fileUrl=${encodeURIComponent(signedUrl)}`);
@@ -710,7 +956,6 @@ renderFromReconciliationFile(fileRecord) {
                 return response.blob(); // Convert response to blob
             })
             .then((blob) => {
-                console.log('Blob received:', blob);
     
                 const file = new File([blob], fileName, { type: blob.type });
                 if (num === '1') {
@@ -731,7 +976,6 @@ renderFromReconciliationFile(fileRecord) {
                 dataTransfer.items.add(file);
                 inputElement.files = dataTransfer.files;
     
-                console.log('File successfully assigned to input field.');
     
                 this.parseExcel(file, num);
             })
@@ -828,9 +1072,7 @@ renderFromReconciliationFile(fileRecord) {
                         // this.parseExcel(files[0], num);
                         
                         this.selectedDvsaReport = files[0];  // ✅ Store reference
-                        console.log('LIAM LOOK HERE ', this.selectedDvsaReport)
                         var xl2json = this.ExcelToJSON();
-                        console.log('LIAM LOOK HERE 2', this.selectedDvsaReport)
                         this.parseExcel(this.selectedDvsaReport, num);
                     };
                 input.click();
@@ -851,7 +1093,6 @@ renderFromReconciliationFile(fileRecord) {
             });
     }  
     renderHTML (data) {  
-        console.log('data is', data)
         // document.getElementById('data-launch-mot-reconciliation-close-button').classList.remove('data-launch-inactive')
         document.getElementById('data-launch-mot-reconciliation-red-only').classList.remove('data-launch-inactive')
         document.getElementById('data-launch-mot-reconciliation-show-all').classList.remove('data-launch-inactive')
@@ -860,7 +1101,7 @@ renderFromReconciliationFile(fileRecord) {
         if (this.recordHasBeenChanged == true) {
             document.getElementById('data-launch-mot-reconciliation-save-button').classList.remove('data-launch-inactive')   
         }
-        if (this.data.status === 0) {
+        if (Number(this.data.status) === 0) {
             document.getElementById('data-launch-mot-reconciliation-submit-button').classList.remove('data-launch-inactive')
         }    
         this.exportRow = 0
@@ -898,6 +1139,8 @@ renderFromReconciliationFile(fileRecord) {
                <th>${data[i].AA}</th>
                <th>${data[i].AB}</th>
                <th>${data[i].AC}</th>
+               <th>Reconciliation Status</th>
+               <th>Reason</th>
                </tr>
                </thead><tbody id="reconciliationTableBody">`
               }
@@ -932,6 +1175,8 @@ renderFromReconciliationFile(fileRecord) {
                <td class='regNumber_${data[i].D} vinNumber_${data[i].E} export-record' data-export-header="${data[0].AA}" data-export-row="${this.exportRow}" data-export-val="${data[i].AA}">${data[i].AA}</td>
                <td class='regNumber_${data[i].D} vinNumber_${data[i].E} export-record' data-export-header="${data[0].AB}" data-export-row="${this.exportRow}" data-export-val="${data[i].AB}">${data[i].AB}</td>
                <td class='regNumber_${data[i].D} vinNumber_${data[i].E} export-record' data-export-header="${data[0].AC}" data-export-row="${this.exportRow}" data-export-val="${data[i].AC}">${data[i].AC}</td>
+               <td class='mot-rec-status-cell export-record' data-export-header="Reconciliation Status" data-export-row="${this.exportRow}" data-export-val=""></td>
+               <td class='mot-rec-reason-cell export-record' data-export-header="Reason" data-export-row="${this.exportRow}" data-export-val=""></td>
                        </tr>`
                this.exportRow++   
               }                
@@ -958,7 +1203,6 @@ renderFromReconciliationFile(fileRecord) {
         r = r.filter(element => {
             const hasInactiveClass = element.classList.contains('data-launch-inactive');
             // Log the elements being checked
-            console.log("Element:", element, "Has 'data-launch-inactive' class:", hasInactiveClass);
             return !hasInactiveClass;
         });
 
@@ -1016,10 +1260,9 @@ renderFromReconciliationFile(fileRecord) {
         document.getElementById('motReconciliationsPage').classList.add('data-launch-hide')
     }
     submitMotReconciliationRecord () {
-        garageClassInstantiated.secureAction('update', 'data_launch_mot_reconciliations', this.data.id, {status: 1, submitted_by: user_ID, submitted_date: new Date()}).then(
+        return garageClassInstantiated.secureAction('update', 'data_launch_mot_reconciliations', this.data.id, {status: 1, submitted_by: user_ID, submitted_date: new Date()}).then(
             res => {
                 this.showCRUDAlert('MOT Reconciliation Successfully Submitted', "success")
-                console.log(' mot reconciliation successfully updated with the bookingreportdocumentid', res)
                 document.getElementById('garagePage').classList.remove('data-launch-hide')
                 document.getElementById('motReconciliationsPage').classList.add('data-launch-hide')
                 garageClassInstantiated.injectDataIntoMotReconciliationSubgrid()
@@ -1167,9 +1410,9 @@ renderFromReconciliationFile(fileRecord) {
     saveMotReconciliationRecord() {
         if (!this.data || !this.data.id) {
             this.showCRUDAlert("No Reconciliation record loaded", "error");
-            return;
+            return Promise.reject(new Error("No reconciliation record loaded"));
         }
-        this.generateExcelFromTable().then(async (buffer) => {
+        return this.generateExcelFromTable().then(async (buffer) => {
         const isOverwrite = !!this.reconciliationFile;
         const fileName = isOverwrite
             ? this.reconciliationFile.name
@@ -1178,7 +1421,6 @@ renderFromReconciliationFile(fileRecord) {
         const excelFile = new File([buffer], fileName, {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         });
-        console.log("📁 Uploading file as:", fileName);
 
         const formData = new FormData();
         formData.append('file', excelFile);
@@ -1194,7 +1436,7 @@ renderFromReconciliationFile(fileRecord) {
         // a.download = 'test-before-upload.xlsx';
         // a.click();
 
-        fetch('/upload', {
+        return fetch('/upload', {
             method: 'POST',
             body: formData
         })
@@ -1214,7 +1456,7 @@ renderFromReconciliationFile(fileRecord) {
                 //     body: JSON.stringify({ key: this.reconciliationFile.name })
                 // });
                 // 🔥 delete previous file before overwriting
-                const deleteRes = await fetch('/api/mot-reconciliation/delete-file', {
+                await fetch('/api/mot-reconciliation/delete-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: this.reconciliationFile.name })
@@ -1224,7 +1466,10 @@ renderFromReconciliationFile(fileRecord) {
                     'data_launch_images',
                     updated.id,
                     updated
-                );
+                ).then((res) => {
+                    this.reconciliationFile = updated;
+                    return res;
+                });
             } else {
                 // ✅ Create new metadata
                 const imgObj = {
@@ -1236,16 +1481,30 @@ renderFromReconciliationFile(fileRecord) {
                     url: result.previewUrl,
                     type: 'Reconciliation Report'
                 };
-                console.log("✅ Updating data_launch_images record with new file URL:", result.previewUrl);
 
 
-                return this.reconciliationFile = garageClassInstantiated.secureAction(
+                return garageClassInstantiated.secureAction(
                     'create',
                     'data_launch_images',
                     null,
                     imgObj
-                );
+                ).then((res) => {
+                    this.reconciliationFile = res;
+                    return res;
+                });
             }
+        })
+        .then(() => {
+            const payload = {
+                using_data_launch_booking_data: this.usingExistingBookingsFromTheSystem ? 1 : 0,
+                data_launch_booking_data_ids: JSON.stringify(this.existingBookingsFromTheSystemIDS || [])
+            };
+            return garageClassInstantiated.secureAction(
+                'update',
+                'data_launch_mot_reconciliations',
+                this.data.id,
+                payload
+            );
         })
         .then(() => {
             this.showCRUDAlert("Reconciliation Excel saved successfully", "success");
@@ -1253,6 +1512,7 @@ renderFromReconciliationFile(fileRecord) {
         .catch(err => {
             console.error("Save failed:", err);
             this.showCRUDAlert("Save failed", "error");
+            throw err;
         });
     });
 }
@@ -1479,15 +1739,15 @@ renderFromReconciliationFile(fileRecord) {
                 bookingDate.getMonth() + 1 === targetMonth  // Match month (getMonth() returns 0-11)
             );
         });
-        console.log('Filtered Bookings:', filteredBookings);
         this.bookingReport = [{A:'mot_booking_date', B: 'vehicle_reg', C: 'vin'}]
+        this.existingBookingsFromTheSystemIDS = []
         for (let i = 0; i < filteredBookings.length; i++) {
             this.existingBookingsFromTheSystemIDS.push(filteredBookings[i].id)
             let formattedDate = this.formatDate(filteredBookings[i].booking_date)            
             this.bookingReport.push({
                 A: formattedDate,
                 B: filteredBookings[i].vehicle_reg,
-                C: ''
+                C: filteredBookings[i].vehicle_vin || ''
             })        
         }
         if (filteredBookings.length >= 1) {
@@ -1500,6 +1760,7 @@ renderFromReconciliationFile(fileRecord) {
                 saveBtn.classList.remove('data-launch-inactive')
             }
         }
+        this.updateInputStateUI()
         this.runQuery()
     }
     formatDate = (isoDate) => {
@@ -1513,8 +1774,12 @@ autoResizeTextarea(textarea) {
 
 
     addListeners () {
-        document.getElementById('motReconciliationsPage').addEventListener('click', (event) => {
-            console.log('something was clicked on the MOT Reconciliations page')
+        const page = document.getElementById('motReconciliationsPage');
+        if (!page) return;
+        if (MOTReconciliation.activeClickHandler) {
+            page.removeEventListener('click', MOTReconciliation.activeClickHandler);
+        }
+        this.boundPageClickHandler = (event) => {
             event.stopPropagation()
             if (event.target.classList.contains('data-launch-only-show-red')) {
                 this.onlyShowRed()
@@ -1523,7 +1788,7 @@ autoResizeTextarea(textarea) {
                 this.showAll()
             }
             else if (event.target.classList.contains('data-launch-upload-file-1')) {
-                if (this.data.status === 1) {
+                if (Number(this.data.status) === 1) {
                     this.showCRUDAlert('You cannot modify a submitted reconciliation', "error")
                 }
                 else {
@@ -1531,7 +1796,7 @@ autoResizeTextarea(textarea) {
                 }                
             }
             else if (event.target.classList.contains('data-launch-upload-file-2')) {
-                if (this.data.status === 1) {
+                if (Number(this.data.status) === 1) {
                     this.showCRUDAlert('You cannot modify a submitted reconciliation', "error")
                 }
                 else {
@@ -1539,7 +1804,7 @@ autoResizeTextarea(textarea) {
                 }              
             }
             else if (event.target.classList.contains('data-launch-add-new-row-to-rec-for-notes')) {
-                if (this.data.status === 1) {
+                if (Number(this.data.status) === 1) {
                     this.showCRUDAlert('You cannot modify a submitted reconciliation', "error")
                 }
                 else {
@@ -1603,12 +1868,15 @@ autoResizeTextarea(textarea) {
                 this.saveMotReconciliationRecord()   
             }
             else if (event.target.classList.contains('data-launch-mot-reconciliation-submit-button')) {
-                if (this.data.status === 1) {
+                if (Number(this.data.status) === 1) {
                     this.showCRUDAlert('Reconciliation has already been submitted', "success")
                 }
                 else {
                     this.saveMotReconciliationRecord()
-                    this.submitMotReconciliationRecord()
+                        .then(() => this.submitMotReconciliationRecord())
+                        .catch(() => {
+                            this.showCRUDAlert('Submit blocked because save failed', "error");
+                        });
                 }
             }
             else if (event.target.classList.contains('data-launch-mot-reconciliation-back-to-garage-view')) {
@@ -1619,7 +1887,9 @@ autoResizeTextarea(textarea) {
             else if (event.target.classList.contains('data-launch-mot-reconciliation-import-garage-boooking-reports-from-data-launch-system')) {
                 this.findBookingsInOurSystem()
             }           
-        })
+        };
+        MOTReconciliation.activeClickHandler = this.boundPageClickHandler;
+        page.addEventListener('click', this.boundPageClickHandler);
     }    
 }
 window.addEventListener('contextmenu', function (e) {

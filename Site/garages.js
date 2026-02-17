@@ -665,99 +665,94 @@ class Garage {
         }
     }
     bookingDataValidation () {
-        let baySelector = document.getElementById('garageBookingsBay')
-        let selectedIndex = baySelector.selectedIndex;
-        let selectedOption = baySelector.options[selectedIndex];
-        let selectedBayValue = selectedOption.value
-        if (selectedBayValue === '') {
-            this.showCRUDAlert(`Please Specify A Bay For The Booking`, 'error')
-            // document.getElementById('bookingDate').style.backgroundColor = 'white'
-            // document.getElementById('timeEnd').style.backgroundColor = 'red'
-            // document.getElementById('timeStart').style.backgroundColor = 'white'
-            document.getElementById('garageBookingsBay').style.backgroundColor = 'red'
-            setTimeout(() => {
-                document.getElementById('garageBookingsBay').style.backgroundColor = 'white'
-            }, 3000);
-            return false
+        const resetHighlight = (el) => { if (el) { el.style.backgroundColor = 'red'; setTimeout(() => { el.style.backgroundColor = ''; }, 3000); } };
+        const bayEl = document.getElementById('garageBookingsBay');
+        const dateEl = document.getElementById('bookingDate');
+        const startEl = document.getElementById('timeStart');
+        const endEl = document.getElementById('timeEnd');
+
+        // Bay check
+        if (!bayEl.value) {
+            this.showCRUDAlert('Please select a bay for the booking', 'error');
+            resetHighlight(bayEl);
+            return false;
         }
-        let bookingDate = document.getElementById('bookingDate').value;
-        let timeStart = document.getElementById('timeStart').value;
-        let timeEnd = document.getElementById('timeEnd').value;
-        let dateObj = new Date(bookingDate);
-        // getDay() returns a number from 0 (Sunday) to 6 (Saturday)
-        let dayIndex = dateObj.getDay();
-        // Map the index to the corresponding day name
-        let daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        let dayName = daysOfWeek[dayIndex];
-        // // console.log('timeStart ', timeStart)
-        // // console.log('timeEnd ', timeEnd)
-        // // console.log('dayName', dayName)
-        // // console.log('this.garageOperatingHours ', this.garageOperatingHours)
-        // // console.log('this,garageScheduledOpeningDays ', this.garageScheduledOpeningDays)
-        let bookingStartHour = timeStart.slice(0, 2)
-        let bookingEndHour = timeEnd.slice(0, 2)
-        // // console.log('bookingStartHour', bookingStartHour)
-        // // console.log('bookingEndHour', bookingEndHour)
-        let workingDayMatch = false
-        let endHoursMinus1 = this.garageOperatingHours.end - 1
-        this.garageScheduledOpeningDays.forEach(day=>{
-            if (day === dayName) {
-                workingDayMatch = true
-            }
-        })
-        if (workingDayMatch === false) {
-            this.showCRUDAlert(`Garage is not open on specified booking date (${dayName}) \n Please contact your administrator for assistance`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'red'
-            return false
+
+        // Date check
+        const bookingDate = dateEl.value;
+        if (!bookingDate) {
+            this.showCRUDAlert('Please specify a booking date', 'error');
+            resetHighlight(dateEl);
+            return false;
         }
-        if (bookingStartHour === '' && bookingEndHour === '') {
-            this.showCRUDAlert(`Please specify a start and end time`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'white'
-            document.getElementById('timeStart').style.backgroundColor = 'red'
-            document.getElementById('timeEnd').style.backgroundColor = 'red'
-            return false
+        const dateObj = new Date(bookingDate);
+        const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayName = daysOfWeek[dateObj.getDay()];
+        if (!this.garageScheduledOpeningDays.includes(dayName)) {
+            this.showCRUDAlert(`Garage is not open on ${dayName}. Please select a working day.`, 'error');
+            resetHighlight(dateEl);
+            return false;
         }
-        if (bookingStartHour === '') {
-            this.showCRUDAlert(`Please specify a start time`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'white'
-            document.getElementById('timeStart').style.backgroundColor = 'red'
-            document.getElementById('timeEnd').style.backgroundColor = 'white'
-            return false
+
+        // Time checks — full minute-level validation
+        const timeStart = startEl.value;
+        const timeEnd = endEl.value;
+        if (!timeStart) {
+            this.showCRUDAlert('Please specify a start time', 'error');
+            resetHighlight(startEl);
+            return false;
         }
-        if (bookingEndHour === '') {
-            this.showCRUDAlert(`Please specify an end time`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'white'
-            document.getElementById('timeEnd').style.backgroundColor = 'red'
-            document.getElementById('timeStart').style.backgroundColor = 'white'
-            return false
+        if (!timeEnd) {
+            this.showCRUDAlert('Please specify an end time', 'error');
+            resetHighlight(endEl);
+            return false;
         }
-        if (parseInt(bookingStartHour) < parseInt(this.garageOperatingHours.start)) {
-            this.showCRUDAlert(`Garage is not open on specified booking time slot(${bookingStartHour}:00) \n Garage is configured for opening hours - ${this.garageOperatingHours.start} - ${endHoursMinus1} \n  Please contact your administrator for assistance`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'white'
-            document.getElementById('timeStart').style.backgroundColor = 'red'
-            return false
+
+        // Convert to minutes for precise comparison
+        const toMins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+        const startMins = toMins(timeStart);
+        const endMins = toMins(timeEnd);
+        const opStart = (this.garageOperatingHours?.start || 8) * 60;
+        const opEnd = (this.garageOperatingHours?.end || 18) * 60;
+
+        if (endMins <= startMins) {
+            this.showCRUDAlert('End time must be after start time', 'error');
+            resetHighlight(endEl);
+            return false;
         }
-        if (parseInt(bookingEndHour) > parseInt(this.garageOperatingHours.end)) {
-            this.showCRUDAlert(`Garage is already closed on specified booking end time (${bookingStartHour}:00) \n Garage is configured for opening hours - ${this.garageOperatingHours.start} - ${endHoursMinus1} \n Please contact your administrator for assistance`, 'error')
-            document.getElementById('timeStart').style.backgroundColor = 'white'
-            document.getElementById('timeEnd').style.backgroundColor = 'red'
-            return false
+        if (startMins < opStart) {
+            this.showCRUDAlert(`Start time (${timeStart}) is before garage opens at ${this.garageOperatingHours?.start || 8}:00`, 'error');
+            resetHighlight(startEl);
+            return false;
         }
-        if (parseInt(bookingStartHour)  > parseInt(this.garageOperatingHours.end)) {
-            this.showCRUDAlert(`Garage is already closed on specified booking start time (${bookingEndHour}:00) \n Garage is configured for opening hours - ${this.garageOperatingHours.start} - ${endHoursMinus1} \n Please contact your administrator for assistance`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'white'
-            document.getElementById('timeStart').style.backgroundColor = 'red'
-            return false
+        if (endMins > opEnd) {
+            this.showCRUDAlert(`End time (${timeEnd}) is after garage closes at ${this.garageOperatingHours?.end || 18}:00`, 'error');
+            resetHighlight(endEl);
+            return false;
         }
-        if (parseInt(bookingEndHour)  < parseInt(this.garageOperatingHours.start)) {
-            this.showCRUDAlert(`Garage would not even be open on specified booking start / end time (${bookingStartHour}:00) \n  Garage is configured for opening hours - ${this.garageOperatingHours.start} - ${endHoursMinus1} \n Please contact your administrator for assistance`, 'error')
-            document.getElementById('bookingDate').style.backgroundColor = 'white'
-            document.getElementById('timeEnd').style.backgroundColor = 'red'
-            return false
+
+        // Overlap / conflict detection
+        const selectedBayId = parseInt(bayEl.value);
+        const currentRecordId = document.getElementById('garageBookingRecordId')?.value;
+        const conflicts = this.garageBookingsData.filter(b => {
+            if (currentRecordId && b.id === parseInt(currentRecordId)) return false; // skip self
+            if (b.bay !== selectedBayId) return false;
+            const bDate = (b.booking_date || '').split('T')[0];
+            if (bDate !== bookingDate) return false;
+            const bStart = toMins(b.time_start);
+            const bEnd = toMins(b.time_end);
+            return startMins < bEnd && endMins > bStart; // overlap check
+        });
+
+        if (conflicts.length > 0) {
+            const conflictInfo = conflicts.map(c => `${c.vehicle_reg || 'Unknown'} (${c.time_start}–${c.time_end})`).join(', ');
+            this.showCRUDAlert(`Time conflict with existing booking(s): ${conflictInfo}. Please choose a different time or bay.`, 'error');
+            resetHighlight(startEl);
+            resetHighlight(endEl);
+            return false;
         }
-        else {
-            return true
-        }
+
+        return true;
     }
 
     addMinutesToTime(startTime, minutesToAdd) {
@@ -1052,11 +1047,12 @@ class Garage {
                     this.saveNewQcCheckersForBikeRecord();
                 }
                 else if (event.target.classList.contains('data-launch-create-new-qc-checkers-for-bikes-record')) {
-                    this.showQcCheckersForBikeModal();
+                    qcCheckWizard.open(this, null, 'bike');
                 }
                 else if (event.target.classList.contains('data-launch-table-clickable-qc-checker-bike-record')) {
                     let id = event.target.attributes["data-id"].value;
-                    this.showQcCheckersForBikeDetails(id);
+                    let record = (this.qcCheckersForBikeData || []).find(r => r.id == id);
+                    qcCheckWizard.open(this, record || null, 'bike');
                 }
                 else if (event.target.classList.contains('data-launch-subgrid-delete-qc-checker-bike-item')) {
                     let id = event.target.attributes["data-id"].value;
@@ -1213,14 +1209,19 @@ class Garage {
 
                 
 
-                else if (event.target.classList.contains('data-launch-create-new-mot-calibration-record')) {
+                else if (event.target.closest && event.target.closest('.data-launch-create-new-mot-calibration-record')) {
                     this.showMotCalibrationModal()                
                 }
                 else if (event.target.classList.contains('data-launch-create-new-mot-site-audit-record')) {
-                    this.showMotSiteAuditModal();
+                    siteAuditWizard.open(this);
                 }
                 else if (event.target.classList.contains('data-launch-create-new-qc-checkers-record')) {
-                    this.showQcCheckersModal();
+                    // Open the new QC Check Wizard instead of the old modal
+                    if (typeof qcCheckWizard !== 'undefined') {
+                        qcCheckWizard.open(this);
+                    } else {
+                        this.showQcCheckersModal();
+                    }
                 }
                 else if (event.target.classList.contains('data-launch-create-new-booking-record')) {
                     this.showGarageBookingsModal()
@@ -1232,8 +1233,9 @@ class Garage {
                     this.showMotBayCleaningLogModal()
                 }            
                 else if (event.target.classList.contains('data-launch-table-clickable-mot-site-audit-record')) {
-                    let id = event.target.attributes["data-id"].value
-                    this.showMotSiteAuditDetails(id);
+                    let id = event.target.attributes["data-id"].value;
+                    let record = (this.motSiteAuditData || []).find(r => r.id == id);
+                    siteAuditWizard.open(this, record || null);
                 }
 
                 else if (event.target.classList.contains('data_launch_garage_create_new_tester_modal_close_button')) {
@@ -1380,6 +1382,11 @@ class Garage {
                 else if (event.target.classList.contains('nextWeekBtn')) {
                     this.garageBookingsSubgridClass.render(null, null, 1, 'garageBookings')
                 }
+                else if (event.target.id === 'todayBtn' || event.target.classList.contains('todayBtn')) {
+                    this.garageBookingsSubgridClass.currentWeekOffset = 0;
+                    this.garageBookingsSubgridClass.referenceDate = this.garageBookingsSubgridClass.getMonday(new Date());
+                    this.garageBookingsSubgridClass.render(null, null, 0, 'garageBookings')
+                }
 
                 ///// END OF ALL REMINDERS LISTENERS (SUBGRID AND OVERDUE ALERTS) //////
 
@@ -1473,12 +1480,14 @@ class Garage {
                     let id = event.target.attributes["data-id"].value
                     this.showMotBayCleaningLogDetails(id);                
                 }      
-                else if (event.target.classList.contains('data-launch-table-clickable-garage-booking-record')) {
-                    let id = event.target.attributes["data-id"].value
+                else if (event.target.closest && event.target.closest('.data-launch-table-clickable-garage-booking-record')) {
+                    let el = event.target.closest('.data-launch-table-clickable-garage-booking-record');
+                    let id = el.getAttribute("data-id");
                     this.showGarageBookingsDetails(id);
                 }
-                else if (event.target.classList.contains('data-launch-table-clickable-garage-booking-record-duplicate')) {
-                    let id = event.target.attributes["data-id"].value
+                else if (event.target.closest && event.target.closest('.data-launch-table-clickable-garage-booking-record-duplicate')) {
+                    let el = event.target.closest('.data-launch-table-clickable-garage-booking-record-duplicate');
+                    let id = el.getAttribute("data-id");
                     this.duplicateGarageBooking(id);
                 }
                 else if (event.target.classList.contains('del-confirmation-modal__btn--cancelDuplicate')) {
@@ -1528,7 +1537,17 @@ class Garage {
                 
                 else if (event.target.classList.contains('data-launch-table-clickable-qc-checker-record')) {
                     let id = event.target.attributes["data-id"].value
-                    this.showQcCheckersDetails(id);
+                    // Open in the new wizard for existing records too
+                    if (typeof qcCheckWizard !== 'undefined') {
+                        let record = this.qcCheckerData.find(r => r.id === parseInt(id));
+                        if (record) {
+                            qcCheckWizard.open(this, record);
+                        } else {
+                            this.showQcCheckersDetails(id);
+                        }
+                    } else {
+                        this.showQcCheckersDetails(id);
+                    }
                 }
                 else if (event.target.classList.contains('data-launch-subgrid-delete-mot-site-audit-item')) {
                     let id = event.target.attributes["data-id"].value;
@@ -1603,25 +1622,29 @@ class Garage {
                     let id = event.target.attributes["data-id"].value
                     this.showExistingMotReconciliationRecord(id)
                 }
-                else if (event.target.classList.contains('data-launch-submit-new-mot-reconciliation-modal')) {
+                else if (event.target.closest && event.target.closest('.data-launch-submit-new-mot-reconciliation-modal')) {
                     let yearEl = document.getElementById('mot_reconciliation_dialogue_year')
-                    let selectedIndexYear = yearEl.selectedIndex;
-                    let year = yearEl.options[selectedIndexYear].value
-
                     let monthEl = document.getElementById('mot_reconciliation_dialogue_month')
-                    let selectedIndexMonth = monthEl.selectedIndex;
-                    let month = monthEl.options[selectedIndexMonth].value
+                    let year = parseInt(yearEl.value, 10)
+                    let month = parseInt(monthEl.value, 10)
+
+                    if (Number.isNaN(year) || Number.isNaN(month)) {
+                        this.showCRUDAlert('Please select both month and year before creating a reconciliation record.', 'error')
+                        return
+                    }
+
                     document.getElementById('motReconciliationModal').style.display = 'none'
                     this.newMotReconciliationRecord(year, month)
                 }
                 else if (event.target.classList.contains('mot-reconciliation-new-record-close')) {
                     document.getElementById('motReconciliationModal').style.display = 'none'
                 }            
-                else if (event.target.classList.contains('data-launch-create-new-mot-reconciliation-record')) {
+                else if (event.target.closest && event.target.closest('.data-launch-create-new-mot-reconciliation-record')) {
                     this.showNewMotReconciliationRecordModal()
                 }
-                else if (event.target.classList.contains('data-launch-table-clickable-mot-calibration-row')) {
-                    let id = event.target.attributes["data-id"].value
+                else if (event.target.closest && event.target.closest('.data-launch-table-clickable-mot-calibration-row')) {
+                    let el = event.target.closest('.data-launch-table-clickable-mot-calibration-row')
+                    let id = el.getAttribute('data-id')
                     this.showMotCalibrationDetails(id);
                 }
                 else if (event.target.classList.contains('data-launch-upload-garages-mot-calibration-document')) {
@@ -1774,7 +1797,7 @@ class Garage {
                 else if (event.target.classList.contains('defect-report-close')) {
                     document.getElementById('defectReportModal').style.display = 'none'              
                 }
-                else if (event.target.classList.contains('garage-booking-close')) {
+                else if (event.target.classList.contains('garage-booking-close') || event.target.classList.contains('bm-close-btn') || event.target.closest('[data-action="close-booking-modal"]')) {
                     document.getElementById('garageBookingModal').style.display = 'none'              
                 }          
                 else if (event.target.classList.contains('mot-bay-cleaning-log-close')) {
@@ -1790,12 +1813,13 @@ class Garage {
                 else if (event.target.classList.contains('mot-site-audit-close')) {
                     document.getElementById('motSiteAuditModal').style.display = 'none'
                 }
-                else if (event.target.classList.contains('mot-calibration-close')) {
-                    document.getElementById('motCalibrationModal').style.display = 'none'
+                else if (event.target.closest && (event.target.closest('.mcw-close-btn') || event.target.closest('.mcw-cancel-btn'))) {
+                    this._closeCalibrationModal()
                 }
-                else if (event.target.classList.contains('data-launch-save-mot-calibration-btn')) {
-                    document.getElementById('motCalibrationModal').style.display = 'none'
-                    this.saveNewMotCalibration()               
+                else if (event.target.closest && event.target.closest('.mcw-save-btn')) {
+                    const saveBtn = document.getElementById('mcw-save-btn')
+                    if (saveBtn && saveBtn.disabled) return // guard: don't save if disabled
+                    this._handleCalibrationSave()
                 }
                 else if (event.target.classList.contains('data-launch-subgrid-delete-mot-equipment-item')) {
                     let id = event.target.attributes["data-id"].value;
@@ -2321,6 +2345,10 @@ class Garage {
                         expiryDate.setMonth(expiryDate.getMonth() + 12);
                     }
                     document.getElementById('mot_calibration_expiry_date').value = expiryDate.toISOString().split('T')[0];
+                    // Update save state since serial number was set programmatically
+                    if (typeof this._updateCalibrationSaveState === 'function') {
+                        this._updateCalibrationSaveState()
+                    }
                 }            
             }, true)
             this.listenersApplied = true
@@ -2681,27 +2709,12 @@ class Garage {
             document.getElementById('data-launch-garage-bookings-cont').innerHTML = 
             `<h3 style='text-align:center; margin-top: 46px;'>You do not have the necessary privileges to view this data</h3>
              <h3 style='text-align:center'> Please contact your Administrator</h3>`
+            return Promise.resolve();
         }
         else {  
-            fetchData('data_launch_garage_bookings', 3000, 0, null, this.id).then(data => {
-                // console.log(`data_launch_garage_bookings for garage_id: ${this.id} `, data);
+            return fetchData('data_launch_garage_bookings', 3000, 0, null, this.id).then(data => {
                 this.garageBookingsData = data
                 this.garageBookingsSubgridClass = new SubGrid(data, 'data-launch-garage-bookings-cont', 'garageBookings',  this.id, null, this.garageBayData, this.garageScheduledOpeningDays, this.garageOperatingHours);
-                // if (this.class_invoked_garageBookingsSubgridClass === false) {
-                //     this.class_invoked_garageBookingsSubgridClass = true
-                //     this.garageBookingsSubgridClass = new SubGrid(data, 'data-launch-garage-bookings-cont', 'garageBookings',  this.id, null, this.garageBayData, this.garageScheduledOpeningDays, this.garageOperatingHours);    
-                // }
-                // else {
-                //     let bookingsSubgridTypeElement = document.getElementById(`data-launch-bookings-subgrid-grid-type-select-element_${this.id}`)
-                //     if (bookingsSubgridTypeElement !== null) {
-                //         let selectedIndex = bookingsSubgridTypeElement.selectedIndex;
-                //         let selectedOption = bookingsSubgridTypeElement.options[selectedIndex];
-                //         this.garageBookingsSubgridClass.render(null, this.garageBookingsData, 0, 'garageBookings', selectedOption.value)
-                //     }
-                //     else {
-                //         this.garageBookingsSubgridClass.render(null, this.garageBookingsData, 0, 'garageBookings')
-                //     }                 
-                // }    
             });
         }
     }
@@ -2857,9 +2870,10 @@ class Garage {
             document.getElementById('data-launch-bays-subgrid-cont').innerHTML = 
             `<h3 style='text-align:center; margin-top: 46px;'>You do not have the necessary privileges to view this data</h3>
              <h3 style='text-align:center'> Please contact your Administrator</h3>`
+            return Promise.resolve();
         }
         else {  
-            fetchData('data_launch_bays', 1000, 0, null, this.id).then(data => {
+            return fetchData('data_launch_bays', 1000, 0, null, this.id).then(data => {
                 // // console.log(`data_launch_bays FOR garage_id: ${this.id} `, data);
                 this.garageBayData = data
                 new SubGrid(data, 'data-launch-bays-subgrid-cont', 'garageBays',  this.id);            
@@ -4316,8 +4330,8 @@ class Garage {
             if (rec["open_on_saturday"] === 1) {this.garageScheduledOpeningDays.push('Saturday')}
             if (rec["open_on_sunday"] === 1) {this.garageScheduledOpeningDays.push('Sunday')}
 
-            if (rec["opening_hours_start_garage"]) {this.garageOperatingHours.start = rec["opening_hours_start_garage"].slice(0, 2)}
-            if (rec["opening_hours_end_garage"]) {this.garageOperatingHours.end = rec["opening_hours_end_garage"].slice(0, 2)}
+            if (rec["opening_hours_start_garage"]) {this.garageOperatingHours.start = parseInt(rec["opening_hours_start_garage"].slice(0, 2), 10)}
+            if (rec["opening_hours_end_garage"]) {this.garageOperatingHours.end = parseInt(rec["opening_hours_end_garage"].slice(0, 2), 10)}
             html = `
             
             <div id="garageSidebar" class="sleek-sidebar">
@@ -4750,81 +4764,143 @@ class Garage {
 
 
 
-                                <div id="motCalibrationModal" style="display: none;" class="modal mot-calibration-modal-popup">
-                                    <div class="modal-content mot-calibration-modal-content">
-                                        <span class="mot-calibration-close">&times;</span>
-                                        <h2>MOT Calibration</h2>
-                                        
-                                        <!-- Tab Navigation -->
-                                        <div class="tabs">
-                                            <button class="tab-button active" onclick="openTab(event, 'MotCalibrationDetailsSection', 'motCalibrationModal')">Details</button>
-                                            <button class="tab-button" onclick="openTab(event, 'MotCalibrationNotesSection', 'motCalibrationModal')">Notes</button>
-                                        </div>
-
-                                        <!-- Tab Content -->
-                                        <div id="MotCalibrationDetailsSection" class="tab-content active">
-                                            <br>
-                                            <label for="mot_equipment_type">Equipment Type:</label>
-                                            <select id="mot_equipment_type" class="data-launch-mot-calibration-record-equipment-select"></select>
-                                            <br><br>
-                                            <div class="data-launch-mot-equipment-half-pane">
-                                                <label for="mot_make">Make:</label>
-                                                <input type="text" id="mot_make" readonly disabled>
-                                            </div>
-                                            <div class="data-launch-mot-equipment-half-pane">
-                                                <label for="mot_model">Model:</label>
-                                                <input type="text" id="mot_model" readonly disabled>
-                                            </div>
-                                            <label for="mot_serial_no">Serial No.:</label>
-                                            <input type="text" id="mot_serial_no" readonly disabled>
-                                            <div class="data-launch-mot-equipment-half-pane">
-                                                <label for="mot_bay">Bay:</label>
-                                                <input type="text" id="mot_bay" readonly disabled>
-                                            </div>
-                                            <div class="data-launch-mot-equipment-half-pane">     
-                                                <label for="mot_calibration_recommended_frequency">Required Frequency:</label>
-                                                <input type="text" readonly disabled id="mot_calibration_recommended_frequency">
-                                            </div>
-                                            <div class="data-launch-mot-equipment-half-pane">                           
-                                                <label for="mot_calibration_date">Calibration Date:</label>
-                                                <input class="mot-calibration-modal-calibration-date-field" type="date" id="mot_calibration_date">
-                                            </div>
-                                            <div class="data-launch-mot-equipment-half-pane">
-                                                <label for="mot_calibration_expiry_date">Calibration Expiry Date:</label>
-                                                <input type="date" id="mot_calibration_expiry_date">
-                                            </div>
-                                            <label id="garageMotCalibrationUploadDocumentButtonLabel_${this.id}" for="garagesMotCalibrationDocumentUpload">Document Upload</label>
-                                            <button id="garageMotCalibrationUploadDocumentButton_${this.id}" class='data-launch-upload-garages-mot-calibration-document'>Upload</button>
-                                            <table class="table table-hover" style="display:none" id="garageMotCalibrationsDocuments${this.id}">
-                                                <thead>
-                                                    <tr>
-                                                        <th style='width: 30%'>Name</th>
-                                                        <th style='width: 30%'>Preview</th>
-                                                        <th style='width: 10%'></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="garageMotCalibrationsDocumentsTableBody_${this.id}"></tbody>
-                                            </table>
-                                        </div>
-
-                                        <div id="MotCalibrationNotesSection" class="tab-content">
-                                            <label for="mot_notes">Notes:</label>
-                                            <textarea id="mot_notes"></textarea><br>
-                                        </div>
-
-                                        <div id="MotCalibrationImagesSection" class="tab-content">
-                                            <div id="mot_image_container" style="display: none;">
-                                                <!-- Images would be dynamically inserted here -->
-                                            </div>
-                                        </div>
-                                        
-                                        <span style="display: none"><input id="motCalibrationRecordId" type="text" value=""></span>
-                                        
-                                        <h4 id="garageMotCalibrationUploadBanner_${this.id}" style='text-align:center'><b>Please Note</b>: <br> Documents & Images can be uploaded once the MOT Calibration Record has been Saved</h4>
-                                        <br>
-                                        <button class="data-launch-save-mot-calibration-btn" id="saveMotCalibrationButton">Save</button>
+                                <!-- MOT Calibration Wizard Overlay (mcw-*) -->
+                                <div id="mcw-overlay" class="mcw-overlay">
+                                  <!-- Header -->
+                                  <div class="mcw-header">
+                                    <div class="mcw-header-title">
+                                      <i class="bi bi-tools"></i>
+                                      <span>MOT Calibration</span>
                                     </div>
+                                    <div class="mcw-header-right">
+                                      <button class="mcw-close-btn" id="mcw-close-btn" title="Close"><i class="bi bi-x-lg"></i></button>
+                                    </div>
+                                  </div>
+
+                                  <!-- Body -->
+                                  <div class="mcw-body">
+
+                                    <!-- Equipment Details Card -->
+                                    <div class="mcw-card">
+                                      <div class="mcw-card-title"><i class="bi bi-cpu"></i> Equipment Details</div>
+                                      <div class="mcw-form-grid">
+                                        <div class="mcw-field-group mcw-field-full">
+                                          <label class="mcw-field-label">Equipment <span class="mcw-required">*</span></label>
+                                          <select id="mot_equipment_type" class="mcw-field-input data-launch-mot-calibration-record-equipment-select"></select>
+                                        </div>
+                                        <div class="mcw-field-group">
+                                          <label class="mcw-field-label">Make</label>
+                                          <input class="mcw-field-input" type="text" id="mot_make" readonly disabled placeholder="Auto-filled">
+                                        </div>
+                                        <div class="mcw-field-group">
+                                          <label class="mcw-field-label">Model</label>
+                                          <input class="mcw-field-input" type="text" id="mot_model" readonly disabled placeholder="Auto-filled">
+                                        </div>
+                                        <div class="mcw-field-group">
+                                          <label class="mcw-field-label">Bay <span class="mcw-required">*</span></label>
+                                          <select id="mot_bay" class="mcw-field-input"></select>
+                                        </div>
+                                        <div class="mcw-field-group">
+                                          <label class="mcw-field-label">Required Frequency</label>
+                                          <input class="mcw-field-input" type="text" id="mot_calibration_recommended_frequency" readonly disabled placeholder="Auto-filled">
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <!-- Serial Verification Card -->
+                                    <div class="mcw-card">
+                                      <div class="mcw-card-title"><i class="bi bi-upc-scan"></i> Serial Verification</div>
+                                      <div class="mcw-field-group" style="margin-bottom: 16px;">
+                                        <label class="mcw-field-label">Serial No. <span class="mcw-required">*</span></label>
+                                        <input class="mcw-field-input" type="text" id="mot_serial_no" placeholder="Enter the serial number">
+                                      </div>
+                                      <label class="mcw-field-label">Photo of Serial Number Plate <span class="mcw-required">*</span></label>
+                                      <div class="mcw-evidence-zone" id="mcw-evidence-zone">
+                                        <div class="mcw-evidence-zone-icon"><i class="bi bi-camera"></i></div>
+                                        <div class="mcw-evidence-zone-text">Upload a photo of the serial number plate</div>
+                                        <div class="mcw-evidence-zone-hint">Click to select or drag an image here (JPG, PNG)</div>
+                                        <input type="file" id="mcw-serial-evidence-input" accept="image/*">
+                                      </div>
+                                      <div class="mcw-evidence-preview" id="mcw-serial-evidence-preview">
+                                        <img id="mcw-serial-evidence-img" src="" alt="Serial number evidence">
+                                        <div class="mcw-evidence-preview-meta">
+                                          <span class="mcw-evidence-checkmark"><i class="bi bi-check-circle-fill"></i> Evidence uploaded</span>
+                                          <a id="mcw-serial-evidence-fullview" class="mcw-evidence-fullview-link" href="#" target="_blank"><i class="bi bi-arrows-fullscreen"></i> View Full</a>
+                                          <button class="mcw-evidence-change-btn" id="mcw-evidence-change-btn">Change</button>
+                                        </div>
+                                      </div>
+                                      <div class="mcw-validation-msg" id="mcw-serial-validation-msg">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        <span>Upload a photo of the serial number to save</span>
+                                      </div>
+                                    </div>
+
+                                    <!-- Calibration Dates Card -->
+                                    <div class="mcw-card">
+                                      <div class="mcw-card-title"><i class="bi bi-calendar-check"></i> Calibration Dates</div>
+                                      <div class="mcw-form-grid">
+                                        <div class="mcw-field-group">
+                                          <label class="mcw-field-label">Calibration Date <span class="mcw-required">*</span></label>
+                                          <input class="mcw-field-input" type="date" id="mot_calibration_date">
+                                        </div>
+                                        <div class="mcw-field-group">
+                                          <label class="mcw-field-label">Expiry Date</label>
+                                          <input class="mcw-field-input" type="date" id="mot_calibration_expiry_date">
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <!-- Documents Card -->
+                                    <div class="mcw-card">
+                                      <div class="mcw-card-title"><i class="bi bi-paperclip"></i> Documents</div>
+                                      <div id="mcw-upload-banner-${this.id}" style="text-align:center; padding: 12px; color: #667085; font-size: 13px;">
+                                        Documents can be uploaded once the record has been saved.
+                                      </div>
+                                      <div id="mcw-upload-controls-${this.id}" style="display:none;">
+                                        <button id="mcw-upload-doc-btn-${this.id}" class="mcw-btn mcw-btn--upload data-launch-upload-garages-mot-calibration-document" style="margin-bottom: 12px;">
+                                          <i class="bi bi-cloud-arrow-up"></i> Upload Document
+                                        </button>
+                                      </div>
+                                      <table class="mcw-doc-table" style="display:none" id="garageMotCalibrationsDocuments${this.id}">
+                                        <thead>
+                                          <tr>
+                                            <th style="width:40%">Name</th>
+                                            <th style="width:40%">Preview</th>
+                                            <th style="width:20%"></th>
+                                          </tr>
+                                        </thead>
+                                        <tbody id="garageMotCalibrationsDocumentsTableBody_${this.id}"></tbody>
+                                      </table>
+                                    </div>
+
+                                    <!-- Notes Card -->
+                                    <div class="mcw-card">
+                                      <div class="mcw-card-title"><i class="bi bi-journal-text"></i> Notes</div>
+                                      <div class="mcw-field-group">
+                                        <textarea class="mcw-field-input" id="mot_notes" rows="4" placeholder="Any additional notes about this calibration..."></textarea>
+                                      </div>
+                                    </div>
+
+                                  </div><!-- end mcw-body -->
+
+                                  <!-- Hidden fields -->
+                                  <input type="hidden" id="motCalibrationRecordId" value="">
+
+                                  <!-- Sticky footer -->
+                                  <div class="mcw-footer">
+                                    <div class="mcw-footer-left">
+                                      <div class="mcw-validation-msg" id="mcw-save-validation-msg">
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        <span id="mcw-save-validation-text">Serial number and photo evidence required</span>
+                                      </div>
+                                    </div>
+                                    <div style="display:flex; gap:12px; align-items:center;">
+                                      <button class="mcw-btn mcw-btn--secondary mcw-cancel-btn" id="mcw-cancel-btn"><i class="bi bi-x-circle"></i> Cancel</button>
+                                      <button class="mcw-btn mcw-btn--primary mcw-save-btn mcw-btn--disabled" id="mcw-save-btn" disabled><i class="bi bi-check-circle"></i> Save</button>
+                                    </div>
+                                  </div>
                                 </div>
+                                <!-- End MOT Calibration Wizard Overlay -->
 
 
 
@@ -5213,117 +5289,164 @@ class Garage {
 
 
                                 <div id="garageBookingModal" class="modal-popup booking-modal-popup" style='display:none'>
-                                    <div class="modal-content booking-modal-content">
-                                        <span class="garage-booking-close">&times;</span>
-                                        <button class="data-launch-garage-booking-print-details">Print  <i class="bi bi-printer"></i></button>
-                                        <h2 style="text-align: center;">Garage Booking</h2>
-                                        <div class="data-launch-garage-booking-checkbox-cont">
-                                            <div class="data-launch-garage-booking-checkbox-section">
-                                                <div class="data-launch-garage-booking-checkbox-content">
-                                                <div class="data-launch-garage-booking-checkbox-label">Booking Made</div>
-                                                <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-booking-made" name="data-launch-garage-booking-made">
-                                                </div>
-                                            </div>
-
-                                            <div class="data-launch-garage-booking-checkbox-section">
-                                                <div class="data-launch-garage-booking-checkbox-content">
-                                                <div class="data-launch-garage-booking-checkbox-label">Vehicle On Site</div>
-                                                <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-vehicle-arrived" name="data-launch-garage-vehicle-arrived">
-                                                </div>
-                                            </div>
-
-                                            <div class="data-launch-garage-booking-checkbox-section">
-                                                <div class="data-launch-garage-booking-checkbox-content">
-                                                <div class="data-launch-garage-booking-checkbox-label">In Progress</div>
-                                                <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-work-in-progress" name="data-launch-garage-work-in-progress">
-                                                </div>
-                                            </div>
-
-                                            <div class="data-launch-garage-booking-checkbox-section">
-                                                <div class="data-launch-garage-booking-checkbox-content">
-                                                <div class="data-launch-garage-booking-checkbox-label">Work Completed</div>
-                                                <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-work-completed" name="data-launch-garage-work-completed">
-                                                </div>
-                                            </div>
+                                  <div class="bm-overlay">
+                                    <div class="bm-container">
+                                      <!-- Header -->
+                                      <div class="bm-header">
+                                        <div class="bm-header-left">
+                                          <i class="bi bi-calendar-check" style="font-size:20px;"></i>
+                                          <span class="bm-header-title">Booking</span>
                                         </div>
-
-
-                                        <!-- Tab Navigation -->
-                                        <div class="tabs">
-                                            <button id="garageBookingModal_BookingDetails_tab" data-tab-name="BookingDetails" class="tab-button booking-modal-popup-header-tab active" onclick="openTab(event, 'BookingDetails', 'garageBookingModal')">Booking Details</button>
-                                            <button id="garageBookingModal_CustomerDetails_tab" data-tab-name="CustomerDetails" class="tab-button booking-modal-popup-header-tab" onclick="openTab(event, 'CustomerDetails', 'garageBookingModal')">Customer Details</button>
-                                            <button id="garageBookingModal_VehicleDetails_tab" data-tab-name="VehicleDetails" class="tab-button booking-modal-popup-header-tab" onclick="openTab(event, 'VehicleDetails', 'garageBookingModal')">Vehicle Details</button>
-                                            <button id="garageBookingModal_AdditionalInfo_tab" data-tab-name="AdditionalInfo" class="tab-button booking-modal-popup-header-tab" onclick="openTab(event, 'AdditionalInfo', 'garageBookingModal')">Additional Info</button>
+                                        <div class="bm-header-right">
+                                          <button class="bm-print-btn data-launch-garage-booking-print-details"><i class="bi bi-printer"></i></button>
+                                          <button class="bm-close-btn" data-action="close-booking-modal" aria-label="Close booking modal">&times;</button>
                                         </div>
+                                      </div>
 
-                                        <!-- Booking Details Section -->
+                                      <!-- Status Pipeline -->
+                                      <div class="bm-status-pipeline">
+                                        <label class="bm-status-chip bm-status-booked">
+                                          <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-booking-made" name="data-launch-garage-booking-made">
+                                          <span class="bm-chip-dot" style="background:#759AF7;"></span>Booked
+                                        </label>
+                                        <div class="bm-status-arrow"><i class="bi bi-chevron-right"></i></div>
+                                        <label class="bm-status-chip bm-status-arrived">
+                                          <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-vehicle-arrived" name="data-launch-garage-vehicle-arrived">
+                                          <span class="bm-chip-dot" style="background:#E4ADFB;"></span>On Site
+                                        </label>
+                                        <div class="bm-status-arrow"><i class="bi bi-chevron-right"></i></div>
+                                        <label class="bm-status-chip bm-status-progress">
+                                          <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-work-in-progress" name="data-launch-garage-work-in-progress">
+                                          <span class="bm-chip-dot" style="background:#F5E77F;"></span>In Progress
+                                        </label>
+                                        <div class="bm-status-arrow"><i class="bi bi-chevron-right"></i></div>
+                                        <label class="bm-status-chip bm-status-complete">
+                                          <input type="checkbox" class="data-launch-garage-booking-status-checkboxes" id="data-launch-garage-work-completed" name="data-launch-garage-work-completed">
+                                          <span class="bm-chip-dot" style="background:#C4EAA2;"></span>Complete
+                                        </label>
+                                      </div>
+
+                                      <!-- Tab Navigation -->
+                                      <div class="bm-tabs tabs">
+                                        <button id="garageBookingModal_BookingDetails_tab" data-tab-name="BookingDetails" class="bm-tab tab-button booking-modal-popup-header-tab active" onclick="openTab(event, 'BookingDetails', 'garageBookingModal')"><i class="bi bi-calendar3"></i> Schedule</button>
+                                        <button id="garageBookingModal_VehicleDetails_tab" data-tab-name="VehicleDetails" class="bm-tab tab-button booking-modal-popup-header-tab" onclick="openTab(event, 'VehicleDetails', 'garageBookingModal')"><i class="bi bi-car-front"></i> Vehicle</button>
+                                        <button id="garageBookingModal_CustomerDetails_tab" data-tab-name="CustomerDetails" class="bm-tab tab-button booking-modal-popup-header-tab" onclick="openTab(event, 'CustomerDetails', 'garageBookingModal')"><i class="bi bi-person"></i> Customer</button>
+                                        <button id="garageBookingModal_AdditionalInfo_tab" data-tab-name="AdditionalInfo" class="bm-tab tab-button booking-modal-popup-header-tab" onclick="openTab(event, 'AdditionalInfo', 'garageBookingModal')"><i class="bi bi-chat-text"></i> Notes</button>
+                                      </div>
+
+                                      <!-- Body -->
+                                      <div class="bm-body">
+                                        <!-- Schedule Tab -->
                                         <div id="BookingDetails" class="tab-content active">
-                                            <label for="bookingDate">Booking Date:</label>
-                                            <input type="date" id="bookingDate"><br>
-
-                                             <label for="garageBookingsBay">Bay:</label>
-                                            <select class="garageBookingsBay" id="garageBookingsBay">
-                                                <option value="">Please choose a Bay</option>
-                                            </select>
-
-                                            <label for="timeStart">Start Time:</label>
-                                            <input class="garage-bookings-start-time" type="time" id="timeStart"><br>
-
-                                            <label for="timeEnd">End Time:</label>
-                                            <input type="time" id="timeEnd"><br>
-                                            
-                                            <div>
-                                                <label style="width: 25%; display: inline-block; vertical-align: middle;" for="motCompleted">MOT Completed:</label>
-                                                <input style="width: 10%; display: inline-block; vertical-align: middle;" type="checkbox" id="motCompleted">
+                                          <div class="bm-field-row">
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="bookingDate"><i class="bi bi-calendar-date"></i> Date</label>
+                                              <input type="date" id="bookingDate" class="bm-input">
                                             </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="garageBookingsBay"><i class="bi bi-building"></i> Bay</label>
+                                              <select class="bm-input garageBookingsBay" id="garageBookingsBay">
+                                                <option value="">Select Bay</option>
+                                              </select>
+                                            </div>
+                                          </div>
+                                          <div class="bm-field-row">
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="timeStart"><i class="bi bi-clock"></i> Start</label>
+                                              <input class="bm-input garage-bookings-start-time" type="time" id="timeStart">
+                                            </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="timeEnd"><i class="bi bi-clock-history"></i> End</label>
+                                              <input type="time" id="timeEnd" class="bm-input">
+                                            </div>
+                                          </div>
+                                          <div class="bm-field-row">
+                                            <label class="bm-toggle-label">
+                                              <input type="checkbox" id="motCompleted" class="bm-toggle">
+                                              <span class="bm-toggle-slider"></span>
+                                              MOT Completed
+                                            </label>
+                                          </div>
                                         </div>
 
-                                        <!-- Customer Details Section -->
-                                        <div id="CustomerDetails" class="tab-content">
-                                            <label for="title">Title:</label>
-                                            <input type="text" id="title"><br>
-
-                                            <label for="customerFirstName">First Name:</label>
-                                            <input type="text" id="customerFirstName"><br>
-
-                                            <label for="customerLastName">Last Name:</label>
-                                            <input type="text" id="customerLastName"><br>
-
-                                            <label for="customerMobile">Mobile Number:</label>
-                                            <input type="text" id="customerMobile"><br>
-
-                                            <label for="customerEmail">Email:</label>
-                                            <input type="email" id="customerEmail"><br>
-                                        </div>
-
-                                        <!-- Vehicle Details Section -->
+                                        <!-- Vehicle Tab -->
                                         <div id="VehicleDetails" class="tab-content">
-                                            <label for="vehicleReg">Vehicle Registration:</label>
-                                            <input type="text" id="vehicleReg">
-                                            <button class="data-launch-fetch-car-details">Fetch Car Details</button><br>
-
-                                            <label for="vehicleMake">Vehicle Make:</label>
-                                            <input type="text" id="vehicleMake"><br>
-
-                                            <label for="vehicleModel">Vehicle Model:</label>
-                                            <input type="text" id="vehicleModel"><br>
-
-                                            <label for="motDueDate">MOT Due Date:</label>
-                                            <input type="date" id="motDueDate"><br>
-
-                                            <label for="vehicleBookingVIN">Vehicle VIN:</label>
-                                            <input type="text" id="vehicleBookingVIN" readonly><br>
+                                          <div class="bm-field-row bm-reg-row">
+                                            <div class="bm-field bm-reg-field">
+                                              <label class="bm-label" for="vehicleReg"><i class="bi bi-upc-scan"></i> Registration</label>
+                                              <div class="bm-reg-controls">
+                                                <input type="text" id="vehicleReg" class="bm-input bm-reg-input" placeholder="e.g. AB12 CDE" style="text-transform:uppercase;font-weight:700;font-size:16px;">
+                                                <button class="bm-fetch-btn data-launch-fetch-car-details"><i class="bi bi-search"></i> Lookup</button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div class="bm-field-row">
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="vehicleMake"><i class="bi bi-car-front"></i> Make</label>
+                                              <input type="text" id="vehicleMake" class="bm-input" placeholder="e.g. Ford">
+                                            </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="vehicleModel">Model</label>
+                                              <input type="text" id="vehicleModel" class="bm-input" placeholder="e.g. Focus">
+                                            </div>
+                                          </div>
+                                          <div class="bm-field-row">
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="motDueDate"><i class="bi bi-calendar-x"></i> MOT Due</label>
+                                              <input type="date" id="motDueDate" class="bm-input">
+                                            </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="vehicleBookingVIN"><i class="bi bi-hash"></i> VIN</label>
+                                              <input type="text" id="vehicleBookingVIN" class="bm-input" readonly placeholder="Auto-populated">
+                                            </div>
+                                          </div>
                                         </div>
 
-                                        <!-- Additional Info Section -->
+                                        <!-- Customer Tab -->
+                                        <div id="CustomerDetails" class="tab-content">
+                                          <div class="bm-field-row">
+                                            <div class="bm-field" style="flex:0.5;">
+                                              <label class="bm-label" for="title">Title</label>
+                                              <input type="text" id="title" class="bm-input" placeholder="Mr/Mrs">
+                                            </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="customerFirstName"><i class="bi bi-person"></i> First Name</label>
+                                              <input type="text" id="customerFirstName" class="bm-input">
+                                            </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="customerLastName">Last Name</label>
+                                              <input type="text" id="customerLastName" class="bm-input">
+                                            </div>
+                                          </div>
+                                          <div class="bm-field-row">
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="customerMobile"><i class="bi bi-phone"></i> Mobile</label>
+                                              <input type="text" id="customerMobile" class="bm-input" placeholder="07700 900 000">
+                                            </div>
+                                            <div class="bm-field">
+                                              <label class="bm-label" for="customerEmail"><i class="bi bi-envelope"></i> Email</label>
+                                              <input type="email" id="customerEmail" class="bm-input" placeholder="customer@email.com">
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <!-- Notes Tab -->
                                         <div id="AdditionalInfo" class="tab-content">
-                                            <input type="hidden" id="garageBookingRecordId">
-                                            <label for="garageBookingNotes">Notes:</label>
-                                            <textarea class="garageBookingNotes-textArea" id="garageBookingNotes"></textarea>
+                                          <input type="hidden" id="garageBookingRecordId">
+                                          <div class="bm-field" style="width:100%;">
+                                            <label class="bm-label" for="garageBookingNotes"><i class="bi bi-chat-text"></i> Notes</label>
+                                            <textarea class="bm-textarea garageBookingNotes-textArea" id="garageBookingNotes" placeholder="Add any notes about this booking..." rows="8"></textarea>
+                                          </div>
                                         </div>
+                                      </div>
 
-                                        <button class="data-launch-save-garage-bookings-btn">Save</button>
+                                      <!-- Footer -->
+                                      <div class="bm-footer">
+                                        <button class="bm-cancel-btn" data-action="close-booking-modal">Cancel</button>
+                                        <button class="bm-save-btn data-launch-save-garage-bookings-btn"><i class="bi bi-check2"></i> Save Booking</button>
+                                      </div>
                                     </div>
+                                  </div>
                                 </div>
 
 
@@ -6495,11 +6618,12 @@ class Garage {
             document.getElementById(headers[key].meta.containerElement).style.top = garageMenuBarHeight + 8 + 'px'
         }
 
-        this.injectDataIntoBaysSubgrid()
+        this.injectDataIntoBaysSubgrid().then(() => {
+            this.injectDataIntoGarageBookingsSubgrid()
+        })
         if (user_FULL_USER !== "1") {
             this.injectDataIntoSpecialNoticesContainer()
         }
-        this.injectDataIntoGarageBookingsSubgrid()
         this.injectDataIntoRemindersSubgrid()
         this.injectDataIntoAssociatedTestersSubgrid()
         this.injectDataIntoMotEquipmentSubgrid()
@@ -7525,13 +7649,24 @@ class Garage {
                 break;
             }
         }
+        if (!data) {
+            console.error('MOT reconciliation record not found for id:', id);
+            this.showCRUDAlert('Could not open reconciliation record. Please refresh and try again.', 'error');
+            return;
+        }
         if (class_invoked_motReconciliation === false) {
-            class_invoked_motReconciliation = true
             document.getElementById('garagePage').classList.add('data-launch-hide')
             document.getElementById('motReconciliationsPage').classList.remove('data-launch-hide')
             this.motReconciliationClassModule = new MOTReconciliation(data, this.id, this.garageBookingsData);
+            class_invoked_motReconciliation = true
         }
         else {
+            if (!this.motReconciliationClassModule) {
+                console.error('motReconciliationClassModule missing, recreating module instance');
+                this.motReconciliationClassModule = new MOTReconciliation(data, this.id, this.garageBookingsData);
+                class_invoked_motReconciliation = true
+                return;
+            }
             document.getElementById('garagePage').classList.add('data-launch-hide')
             document.getElementById('motReconciliationsPage').classList.remove('data-launch-hide')
             this.motReconciliationClassModule.renderPage(data, this.id, this.garageBookingsData)
@@ -7544,20 +7679,30 @@ class Garage {
             year: year,
             month: month,
             status: 0,
+            booking_report_id: 0,
+            dvsa_report_id: 0,
             created_by: user_ID,
-            create_date: new Date()
+            create_date: new Date(),
+            submitted_by: 0,
+            submitted_date: new Date()
         }
         this.secureAction('create', 'data_launch_mot_reconciliations', null, objToSubmit).then(
             res => {
                 this.injectDataIntoMotReconciliationSubgrid()
                 // // console.log('successfully created a reconciliation record in the database', res)
                 if (class_invoked_motReconciliation === false) {
-                    class_invoked_motReconciliation = true
                     document.getElementById('garagePage').classList.add('data-launch-hide')
                     document.getElementById('motReconciliationsPage').classList.remove('data-launch-hide')
                     this.motReconciliationClassModule = new MOTReconciliation(res, this.id, this.garageBookingsData);
+                    class_invoked_motReconciliation = true
                 }
                 else {
+                    if (!this.motReconciliationClassModule) {
+                        console.error('motReconciliationClassModule missing during create flow, recreating module instance');
+                        this.motReconciliationClassModule = new MOTReconciliation(res, this.id, this.garageBookingsData);
+                        class_invoked_motReconciliation = true
+                        return;
+                    }
                     document.getElementById('garagePage').classList.add('data-launch-hide')
                     document.getElementById('motReconciliationsPage').classList.remove('data-launch-hide')
                     this.motReconciliationClassModule.renderPage(res, this.id, this.garageBookingsData, {removePreviousFile: true})
@@ -7584,8 +7729,22 @@ class Garage {
     }
 
     showNewMotReconciliationRecordModal () {
-        document.getElementById('mot_reconciliation_dialogue_year').selectedIndex = -1
-        document.getElementById('mot_reconciliation_dialogue_month').selectedIndex = -1
+        const yearEl = document.getElementById('mot_reconciliation_dialogue_year')
+        const monthEl = document.getElementById('mot_reconciliation_dialogue_month')
+        const now = new Date()
+        const currentYear = String(now.getFullYear())
+        const currentMonth = String(now.getMonth() + 1)
+
+        yearEl.value = currentYear
+        if (yearEl.value !== currentYear) {
+            yearEl.selectedIndex = 0
+        }
+
+        monthEl.value = currentMonth
+        if (monthEl.value !== currentMonth) {
+            monthEl.selectedIndex = 0
+        }
+
         document.getElementById('motReconciliationModal').style.display = 'block'
     }
 
@@ -8078,21 +8237,45 @@ class Garage {
     ////// SHOW MODAL FOR NEW RECORD 
     showMotCalibrationModal () {
         this.motCalibrationDocumentFiles = []
-        document.getElementById('motCalibrationModal').style.display = 'block'
+        this.serialEvidenceFile = null
+        this.pendingSerialEvidenceUploadResult = null
+        this.existingSerialEvidenceCount = 0
+
+        // Show the overlay
+        document.getElementById('mcw-overlay').classList.add('active')
+        document.body.style.overflow = 'hidden'
+
+        // Reset documents area — show banner, hide upload controls
         document.getElementById(`garageMotCalibrationsDocumentsTableBody_${this.id}`).innerHTML = ''
-        document.getElementById(`garageMotCalibrationUploadDocumentButton_${this.id}`).style.display = 'none'    
-        document.getElementById(`garageMotCalibrationUploadDocumentButtonLabel_${this.id}`).style.display = 'none'
-        document.getElementById(`garageMotCalibrationUploadBanner_${this.id}`).style.display = 'block';
-            
+        const uploadsTable = document.getElementById(`garageMotCalibrationsDocuments${this.id}`)
+        if (uploadsTable) uploadsTable.style.display = 'none'
+        const uploadBanner = document.getElementById(`mcw-upload-banner-${this.id}`)
+        if (uploadBanner) uploadBanner.style.display = 'block'
+        const uploadControls = document.getElementById(`mcw-upload-controls-${this.id}`)
+        if (uploadControls) uploadControls.style.display = 'none'
+
+        // Reset serial evidence preview
+        const evidencePreview = document.getElementById('mcw-serial-evidence-preview')
+        if (evidencePreview) evidencePreview.classList.remove('active')
+        const evidenceImg = document.getElementById('mcw-serial-evidence-img')
+        if (evidenceImg) evidenceImg.src = ''
+        const evidenceZone = document.getElementById('mcw-evidence-zone')
+        if (evidenceZone) evidenceZone.classList.remove('has-file')
+        const evidenceInput = document.getElementById('mcw-serial-evidence-input')
+        if (evidenceInput) { evidenceInput.value = ''; evidenceInput.disabled = false; }
+
+        // Reset form fields
         document.getElementById('mot_equipment_type').value = ''
-        document.getElementById('mot_make').value =''
+        document.getElementById('mot_make').value = ''
         document.getElementById('mot_model').value = ''
         document.getElementById('mot_serial_no').value = ''
+        document.getElementById('mot_serial_no').disabled = false
+        document.getElementById('mot_serial_no').readOnly = false
+
+        // Populate bay select
         let html = `<option value="">Please Choose Bay</option>`
-        // // console.log('this.garageBayData', this.garageBayData)
         for (let i = 0; i < this.garageBayData.length; i++) {
-            html +=  
-            `
+            html += `
             <option
                 class="data-launch-mot-calibration-record-bay-select"
                 value="${this.garageBayData[i].id}"
@@ -8105,22 +8288,18 @@ class Garage {
             `
         }
         document.getElementById('mot_bay').innerHTML = html
-        
-        document.getElementById('mot_calibration_date').value = new Date().toISOString().split('T')[0];
+
+        document.getElementById('mot_calibration_date').value = new Date().toISOString().split('T')[0]
         document.getElementById('mot_calibration_recommended_frequency').value = ''
-        
-        
         document.getElementById('mot_calibration_expiry_date').value = ''
         document.getElementById('mot_notes').value = ''
         document.getElementById('motCalibrationRecordId').value = ''
-
         document.getElementById('mot_equipment_type').disabled = false
-        
+
+        // Populate equipment select
         let html2 = `<option value="">Please Choose Equipment Record</option>`
-        // // console.log('this.motEquipmentData', this.motEquipmentData)
         for (let i = 0; i < this.motEquipmentData.length; i++) {
-            html2 +=  
-            `
+            html2 += `
             <option
                 class="data-launch-mot-calibration-record-equipment-select"
                 value="${this.motEquipmentData[i].id}"
@@ -8136,8 +8315,133 @@ class Garage {
             `
         }
         document.getElementById('mot_equipment_type').innerHTML = html2
-        // document.getElementById('mot_image_container').style.display = 'none'
+
+        // Wire up serial evidence file input and serial number input listeners (only once)
+        this._bindCalibrationModalEvents()
+
+        // Set initial save state (disabled until serial + evidence)
+        this._updateCalibrationSaveState()
     }
+
+    // Bind events scoped to the calibration modal (idempotent via flag)
+    _bindCalibrationModalEvents() {
+        if (this._mcwEventsBound) return
+        this._mcwEventsBound = true
+
+        // Serial evidence file input
+        const evidenceInput = document.getElementById('mcw-serial-evidence-input')
+        if (evidenceInput) {
+            evidenceInput.addEventListener('change', (e) => {
+                const file = e.target.files[0]
+                if (!file) return
+                this.serialEvidenceFile = file
+                // Show inline preview
+                const reader = new FileReader()
+                reader.onload = (ev) => {
+                    const img = document.getElementById('mcw-serial-evidence-img')
+                    if (img) img.src = ev.target.result
+                    const preview = document.getElementById('mcw-serial-evidence-preview')
+                    if (preview) preview.classList.add('active')
+                    const zone = document.getElementById('mcw-evidence-zone')
+                    if (zone) zone.classList.add('has-file')
+                    // For new file, fullview link points to the data URL temporarily
+                    const fullview = document.getElementById('mcw-serial-evidence-fullview')
+                    if (fullview) fullview.href = ev.target.result
+                }
+                reader.readAsDataURL(file)
+                this._updateCalibrationSaveState()
+            })
+        }
+
+        // "Change" button re-triggers file input
+        const changeBtn = document.getElementById('mcw-evidence-change-btn')
+        if (changeBtn) {
+            changeBtn.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const input = document.getElementById('mcw-serial-evidence-input')
+                if (input) { input.value = ''; input.click() }
+            })
+        }
+
+        // Serial number text input — update save state on every keystroke
+        const serialInput = document.getElementById('mot_serial_no')
+        if (serialInput) {
+            serialInput.addEventListener('input', () => {
+                this._updateCalibrationSaveState()
+            })
+        }
+    }
+
+    // Validate serial number + evidence and update save button state
+    _updateCalibrationSaveState() {
+        const serialInput = document.getElementById('mot_serial_no')
+        const serialNo = serialInput ? serialInput.value.trim() : ''
+        const hasEvidence = (this.serialEvidenceFile !== null) || (this.existingSerialEvidenceCount > 0)
+        const btn = document.getElementById('mcw-save-btn')
+        const msgEl = document.getElementById('mcw-save-validation-msg')
+        const msgText = document.getElementById('mcw-save-validation-text')
+        const inlineMsg = document.getElementById('mcw-serial-validation-msg')
+
+        if (serialNo && hasEvidence) {
+            if (btn) { btn.disabled = false; btn.classList.remove('mcw-btn--disabled') }
+            if (msgEl) msgEl.classList.remove('active')
+            if (inlineMsg) inlineMsg.classList.remove('active')
+        } else {
+            if (btn) { btn.disabled = true; btn.classList.add('mcw-btn--disabled') }
+            let reason = ''
+            if (!serialNo && !hasEvidence) {
+                reason = 'Serial number and photo evidence required'
+            } else if (!serialNo) {
+                reason = 'Serial number is required'
+            } else {
+                reason = 'Upload a photo of the serial number to save'
+            }
+            if (msgText) msgText.textContent = reason
+            if (msgEl) msgEl.classList.add('active')
+            // Show inline hint under evidence zone only when evidence is missing
+            if (inlineMsg) {
+                if (!hasEvidence) {
+                    inlineMsg.classList.add('active')
+                } else {
+                    inlineMsg.classList.remove('active')
+                }
+            }
+        }
+    }
+
+    // Close the calibration modal overlay
+    _closeCalibrationModal() {
+        document.getElementById('mcw-overlay').classList.remove('active')
+        document.body.style.overflow = ''
+    }
+
+    // Handle calibration save: upload serial evidence first, then save record
+    async _handleCalibrationSave() {
+        // If there's a new serial evidence file, upload it first
+        if (this.serialEvidenceFile) {
+            try {
+                const formData = new FormData()
+                formData.append('file', this.serialEvidenceFile)
+                const response = await fetch('/upload', { method: 'POST', body: formData })
+                const result = await response.json()
+                if (response.ok) {
+                    this.pendingSerialEvidenceUploadResult = result
+                } else {
+                    this.showCRUDAlert('Failed to upload serial evidence photo. Please try again.', 'error')
+                    return
+                }
+            } catch (err) {
+                console.error('Error uploading serial evidence:', err)
+                this.showCRUDAlert('Failed to upload serial evidence photo. Please try again.', 'error')
+                return
+            }
+        }
+        // Close modal and proceed with save
+        this._closeCalibrationModal()
+        this.saveNewMotCalibration()
+    }
+
     ////// MOT CALIBRATION SUBGRID MODAL HANDLERS
     ///// SAVE NEW OR EXISTING RECORD
     saveNewMotCalibration() {
@@ -8187,18 +8491,33 @@ class Garage {
         if (motCalibrationRecordId === "") {
             // Sending the data to the server to create a new record
             this.secureAction('create', 'data_launch_mot_calibration', null, newRecord).then(res => {
-                // // console.log('data_launch_mot_calibration res', res)
+                // Save any general document files
                 for (let i = 0; i < this.motCalibrationDocumentFiles.length; i++) {
                     this.motCalibrationDocumentFiles[i].tester_id = this.id
                     this.motCalibrationDocumentFiles[i].record_id = res.id
                     this.motCalibrationDocumentFiles[i].record_type = 'mot_calibration_images'
-                    // // console.log('heres what im trying to send to data_launch_images ' , this.motCalibrationDocumentFiles[i])
                     this.secureAction('create', 'data_launch_images', null, this.motCalibrationDocumentFiles[i]).then(result =>{
-                        // console.log('successfully created data launch images result', result)
                     }, err => {
                         console.error(err)
                     })                  
                 }
+                // Save serial evidence image if uploaded
+                if (this.pendingSerialEvidenceUploadResult) {
+                    const evidenceObj = {
+                        name: this.pendingSerialEvidenceUploadResult.fileName,
+                        record_id: res.id,
+                        record_type: 'calibration_serial_evidence',
+                        garage_id: this.id,
+                        etag: this.pendingSerialEvidenceUploadResult.etag,
+                        url: this.pendingSerialEvidenceUploadResult.previewUrl
+                    }
+                    this.secureAction('create', 'data_launch_images', null, evidenceObj).then(() => {
+                        this.pendingSerialEvidenceUploadResult = null
+                    }, err => {
+                        console.error('Error saving serial evidence record:', err)
+                    })
+                }
+                this.showCRUDAlert('Calibration record created successfully', 'success')
                 this.injectDataIntoMotCalibrationSubgrid()
                 this.updateEquipmentRecord(equipmentMeta)
                 this.createReminderRecord(equipmentMeta)
@@ -8211,23 +8530,38 @@ class Garage {
             let recordId = parseInt(motCalibrationRecordId);
             newRecord.id = recordId;
             this.secureAction('update', 'data_launch_mot_calibration', recordId, newRecord).then(res => {
-                // // console.log('data_launch_mot_calibration res', res);
+                // Save any new general document files
                 for (let i = 0; i < this.motCalibrationDocumentFiles.length; i++) {
                     this.motCalibrationDocumentFiles[i].tester_id = this.id
                     this.motCalibrationDocumentFiles[i].record_id = res.id
                     this.motCalibrationDocumentFiles[i].record_type = 'mot_calibration_images'
-                    // // console.log('heres what im trying to send to data_launch_images ' , this.motCalibrationDocumentFiles[i])
                     this.secureAction('create', 'data_launch_images', null, this.motCalibrationDocumentFiles[i]).then(result =>{
-                        // console.log('successfully created data launch images result', result)
                     }, err => {
                         console.error(err)
                     })                  
                 }   
+                // Save serial evidence image if newly uploaded
+                if (this.pendingSerialEvidenceUploadResult) {
+                    const evidenceObj = {
+                        name: this.pendingSerialEvidenceUploadResult.fileName,
+                        record_id: res.id,
+                        record_type: 'calibration_serial_evidence',
+                        garage_id: this.id,
+                        etag: this.pendingSerialEvidenceUploadResult.etag,
+                        url: this.pendingSerialEvidenceUploadResult.previewUrl
+                    }
+                    this.secureAction('create', 'data_launch_images', null, evidenceObj).then(() => {
+                        this.pendingSerialEvidenceUploadResult = null
+                    }, err => {
+                        console.error('Error saving serial evidence record:', err)
+                    })
+                }
                 for (let i = 0; i < this.motCalibrationData.length; i++) {
                     if (this.motCalibrationData[i].id === recordId) {
                         this.motCalibrationData[i] = res;
                     }        
                 }
+                this.showCRUDAlert('Calibration record updated successfully', 'success')
                 this.injectDataIntoMotCalibrationSubgrid();
                 this.updateEquipmentRecord(equipmentMeta)
             }, err => { 
@@ -8239,8 +8573,11 @@ class Garage {
     ////// SHOW MODAL FOR EXISTING RECORD
     showMotCalibrationDetails(calibrationId) {
         this.motCalibrationId = calibrationId
-        document.getElementById(`garageMotCalibrationsDocuments${this.id}`).style.display = 'block'
         this.motCalibrationDocumentFiles = []
+        this.serialEvidenceFile = null
+        this.pendingSerialEvidenceUploadResult = null
+        this.existingSerialEvidenceCount = 0
+
         let data;
         for (let i = 0; i < this.motCalibrationData.length; i++) {
             if (this.motCalibrationData[i].id === parseInt(calibrationId)) {
@@ -8251,169 +8588,137 @@ class Garage {
 
         if (!data) {
             console.error('Calibration record not found:', calibrationId);
+            this.showCRUDAlert('Calibration record not found. Please refresh and try again.', 'error')
             return;
         }
 
-        // // console.log('show mot calibration details', data);
+        // Open overlay
+        document.getElementById('mcw-overlay').classList.add('active')
+        document.body.style.overflow = 'hidden'
+
+        // Populate equipment select (locked for existing record)
         document.getElementById('mot_equipment_type').disabled = true
         document.getElementById('mot_equipment_type').innerHTML = `<option
-                                                                            data-id="${data.equipment_id}"
-                                                                            data-make="${data.make}"
-                                                                            data-model="${data.model}"
-                                                                            data-serial-no="${data.serial_no}"
-                                                                            data-equipment-type="${data.equipment_type}">${data.equipment_type}</option>`;
+            data-id="${data.equipment_id}"
+            data-make="${data.make}"
+            data-model="${data.model}"
+            data-serial-no="${data.serial_no}"
+            data-frequency="${data.required_frequency || ''}"
+            data-equipment-type="${data.equipment_type}">${data.equipment_type}</option>`;
         document.getElementById('mot_make').value = data.make;
         document.getElementById('mot_model').value = data.model;
         document.getElementById('mot_serial_no').value = data.serial_no;
-        document.getElementById('mot_bay').value = data.bay;
-        
+        document.getElementById('mot_serial_no').disabled = false
+        document.getElementById('mot_serial_no').readOnly = false
+
+        // Populate bay select
+        let bayHtml = `<option value="${data.bay}">${data.bay}</option>`
+        for (let i = 0; i < this.garageBayData.length; i++) {
+            if (String(this.garageBayData[i].id) !== String(data.bay)) {
+                bayHtml += `<option value="${this.garageBayData[i].id}"
+                    data-name="${this.garageBayData[i].bay_name}"
+                    data-mot-bay="${this.garageBayData[i].mot_bay}"
+                    data-time-segments="${this.garageBayData[i].time_segments}"
+                    data-id="${this.garageBayData[i].id}">
+                    ${this.garageBayData[i].bay_name} / ${this.garageBayData[i].time_segments}
+                </option>`
+            }
+        }
+        document.getElementById('mot_bay').innerHTML = bayHtml
+
         document.getElementById('mot_calibration_date').value = data.calibration_date;
         document.getElementById('mot_calibration_expiry_date').value = data.calibration_expiry_date;
         document.getElementById('mot_notes').value = data.notes;
         document.getElementById('motCalibrationRecordId').value = data.id || '';
         document.getElementById('mot_calibration_recommended_frequency').value = data.required_frequency || ''
-        // Display the modal
-        document.getElementById('motCalibrationModal').style.display = 'block';
-        document.getElementById(`garageMotCalibrationUploadBanner_${this.id}`).style.display = 'none';
-        document.getElementById(`garageMotCalibrationUploadDocumentButton_${this.id}`).style.display = 'block'    
-        document.getElementById(`garageMotCalibrationUploadDocumentButtonLabel_${this.id}`).style.display = 'block'
+
+        // Show document upload controls (record already exists)
+        const uploadBanner = document.getElementById(`mcw-upload-banner-${this.id}`)
+        if (uploadBanner) uploadBanner.style.display = 'none'
+        const uploadControls = document.getElementById(`mcw-upload-controls-${this.id}`)
+        if (uploadControls) uploadControls.style.display = 'block'
+
+        // Reset serial evidence preview
+        const evidencePreview = document.getElementById('mcw-serial-evidence-preview')
+        if (evidencePreview) evidencePreview.classList.remove('active')
+        const evidenceImg = document.getElementById('mcw-serial-evidence-img')
+        if (evidenceImg) evidenceImg.src = ''
+        const evidenceZone = document.getElementById('mcw-evidence-zone')
+        if (evidenceZone) evidenceZone.classList.remove('has-file')
+        const evidenceInput = document.getElementById('mcw-serial-evidence-input')
+        if (evidenceInput) { evidenceInput.value = ''; evidenceInput.disabled = false; }
+
+        // Wire events (idempotent)
+        this._bindCalibrationModalEvents()
+
+        // Reset doc table
+        const docTable = document.getElementById(`garageMotCalibrationsDocuments${this.id}`)
+        if (docTable) docTable.style.display = 'none'
+        document.getElementById(`garageMotCalibrationsDocumentsTableBody_${this.id}`).innerHTML = ''
+
+        // Fetch ALL images for this calibration record
         fetchData('data_launch_images', 1000, 0, null, this.id, null,null,null,null, parseInt(this.motCalibrationId), null, null, 'garage_mot_calibration').then(
             res => {
-                // // console.log('data_launch_images res', res)
-                let imageData = res
-                this.motCalibrationDocumentFiles = res
-                let htmlPromises = imageData.map((image, i) => 
-                    getImageDocUrl(image.name).then(url => {
-                      let rowHtml = `
-                        <tr id='mot_calibration_files_row_${i}'>
-                          <td id='mot_calibration_files_row_${i}_name'>${image.name.substring(0, 20)}</td>
-                      `;
-                  
-                      const fileType = image.name.split('.').pop();
-                      if (fileType === 'txt') {
-                        rowHtml += `
-                          <td>
-                            <svg data-name="${image.name}" data-image="false" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-filetype-txt mot-calibration-image-preview" src="${url}" viewBox="0 0 16 16">
-                              <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-2v-1h2a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.928 15.849v-3.337h1.136v-.662H0v.662h1.134v3.337zm4.689-3.999h-.894L4.9 13.289h-.035l-.832-1.439h-.932l1.228 1.983-1.24 2.016h.862l.853-1.415h.035l.85 1.415h.907l-1.253-1.992zm1.93.662v3.337h-.794v-3.337H6.619v-.662h3.064v.662H8.546Z"/>
-                            </svg>
-                          </td>
-                        `;
-                      } 
-                      else if (fileType === 'xls') {
-                        rowHtml += `
-                        <td>
-                            <svg data-name="${image.name}" data-image="false" src="${url}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-filetype-xls mot-calibration-image-preview" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM6.472 15.29a1.2 1.2 0 0 1-.111-.449h.765a.58.58 0 0 0 .254.384q.106.073.25.114.143.041.319.041.246 0 .413-.07a.56.56 0 0 0 .255-.193.5.5 0 0 0 .085-.29.39.39 0 0 0-.153-.326q-.152-.12-.462-.193l-.619-.143a1.7 1.7 0 0 1-.539-.214 1 1 0 0 1-.351-.367 1.1 1.1 0 0 1-.123-.524q0-.366.19-.639.19-.272.527-.422.338-.15.777-.149.457 0 .78.152.324.153.5.41.18.255.2.566h-.75a.56.56 0 0 0-.12-.258.6.6 0 0 0-.247-.181.9.9 0 0 0-.369-.068q-.325 0-.513.152a.47.47 0 0 0-.184.384q0 .18.143.3a1 1 0 0 0 .405.175l.62.143q.326.075.566.211a1 1 0 0 1 .375.358q.135.222.135.56 0 .37-.188.656a1.2 1.2 0 0 1-.539.439q-.351.158-.858.158-.381 0-.665-.09a1.4 1.4 0 0 1-.478-.252 1.1 1.1 0 0 1-.29-.375m-2.945-3.358h-.893L1.81 13.37h-.036l-.832-1.438h-.93l1.227 1.983L0 15.931h.861l.853-1.415h.035l.85 1.415h.908L2.253 13.94zm2.727 3.325H4.557v-3.325h-.79v4h2.487z"/>
-                            </svg>
-                        </td>
-                        
-                        `
-                    }
-                    else if (fileType === 'xlsx') {
-                        rowHtml += `
-                        <td>
-                            <svg data-name="${image.name}" data-image="false" src="${url}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-filetype-xlsx mot-calibration-image-preview" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M14 4.5V11h-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM7.86 14.841a1.13 1.13 0 0 0 .401.823q.195.162.479.252.284.091.665.091.507 0 .858-.158.355-.158.54-.44a1.17 1.17 0 0 0 .187-.656q0-.336-.135-.56a1 1 0 0 0-.375-.357 2 2 0 0 0-.565-.21l-.621-.144a1 1 0 0 1-.405-.176.37.37 0 0 1-.143-.299q0-.234.184-.384.188-.152.513-.152.214 0 .37.068a.6.6 0 0 1 .245.181.56.56 0 0 1 .12.258h.75a1.1 1.1 0 0 0-.199-.566 1.2 1.2 0 0 0-.5-.41 1.8 1.8 0 0 0-.78-.152q-.44 0-.777.15-.336.149-.527.421-.19.273-.19.639 0 .302.123.524t.351.367q.229.143.54.213l.618.144q.31.073.462.193a.39.39 0 0 1 .153.326.5.5 0 0 1-.085.29.56.56 0 0 1-.255.193q-.168.07-.413.07-.176 0-.32-.04a.8.8 0 0 1-.249-.115.58.58 0 0 1-.255-.384zm-3.726-2.909h.893l-1.274 2.007 1.254 1.992h-.908l-.85-1.415h-.035l-.853 1.415H1.5l1.24-2.016-1.228-1.983h.931l.832 1.438h.036zm1.923 3.325h1.697v.674H5.266v-3.999h.791zm7.636-3.325h.893l-1.274 2.007 1.254 1.992h-.908l-.85-1.415h-.035l-.853 1.415h-.861l1.24-2.016-1.228-1.983h.931l.832 1.438h.036z"/>
-                            </svg>
-                        </td>
-                        
-                        `
-                    }
-                    else if (fileType === 'pdf') {
-                        rowHtml += `
-                        <td>
-                          <svg data-name="${image.name}" data-image="false" src="${url}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf mot-calibration-image-preview" viewBox="0 0 16 16">
-                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
-                            <path d="M4.603 14.087a.8.8 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.7 7.7 0 0 1 1.482-.645 20 20 0 0 0 1.062-2.227 7.3 7.3 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.188-.012.396-.047.614-.084.51-.27 1.134-.52 1.794a11 11 0 0 0 .98 1.686 5.8 5.8 0 0 1 1.334.05c.364.066.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.86.86 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.7 5.7 0 0 1-.911-.95 11.7 11.7 0 0 0-1.997.406 11.3 11.3 0 0 1-1.02 1.51c-.292.35-.609.656-.927.787a.8.8 0 0 1-.58.029m1.379-1.901q-.25.115-.459.238c-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361q.016.032.026.044l.035-.012c.137-.056.355-.235.635-.572a8 8 0 0 0 .45-.606m1.64-1.33a13 13 0 0 1 1.01-.193 12 12 0 0 1-.51-.858 21 21 0 0 1-.5 1.05zm2.446.45q.226.245.435.41c.24.19.407.253.498.256a.1.1 0 0 0 .07-.015.3.3 0 0 0 .094-.125.44.44 0 0 0 .059-.2.1.1 0 0 0-.026-.063c-.052-.062-.2-.152-.518-.209a4 4 0 0 0-.612-.053zM8.078 7.8a7 7 0 0 0 .2-.828q.046-.282.038-.465a.6.6 0 0 0-.032-.198.5.5 0 0 0-.145.04c-.087.035-.158.106-.196.283-.04.192-.03.469.046.822q.036.167.09.346z"/>
-                          </svg>
-                        </td>                                
-                        `
-                    }
-                    else if (fileType === 'csv') {
-                        rowHtml += `
-                        <td>
-                            <svg data-name="${image.name}" data-image="false" src="${url}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-filetype-csv mot-calibration-image-preview" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-1v-1h1a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM3.517 14.841a1.13 1.13 0 0 0 .401.823q.195.162.478.252.284.091.665.091.507 0 .859-.158.354-.158.539-.44.187-.284.187-.656 0-.336-.134-.56a1 1 0 0 0-.375-.357 2 2 0 0 0-.566-.21l-.621-.144a1 1 0 0 1-.404-.176.37.37 0 0 1-.144-.299q0-.234.185-.384.188-.152.512-.152.214 0 .37.068a.6.6 0 0 1 .246.181.56.56 0 0 1 .12.258h.75a1.1 1.1 0 0 0-.2-.566 1.2 1.2 0 0 0-.5-.41 1.8 1.8 0 0 0-.78-.152q-.439 0-.776.15-.337.149-.527.421-.19.273-.19.639 0 .302.122.524.124.223.352.367.228.143.539.213l.618.144q.31.073.463.193a.39.39 0 0 1 .152.326.5.5 0 0 1-.085.29.56.56 0 0 1-.255.193q-.167.07-.413.07-.175 0-.32-.04a.8.8 0 0 1-.248-.115.58.58 0 0 1-.255-.384zM.806 13.693q0-.373.102-.633a.87.87 0 0 1 .302-.399.8.8 0 0 1 .475-.137q.225 0 .398.097a.7.7 0 0 1 .272.26.85.85 0 0 1 .12.381h.765v-.072a1.33 1.33 0 0 0-.466-.964 1.4 1.4 0 0 0-.489-.272 1.8 1.8 0 0 0-.606-.097q-.534 0-.911.223-.375.222-.572.632-.195.41-.196.979v.498q0 .568.193.976.197.407.572.626.375.217.914.217.439 0 .785-.164t.55-.454a1.27 1.27 0 0 0 .226-.674v-.076h-.764a.8.8 0 0 1-.118.363.7.7 0 0 1-.272.25.9.9 0 0 1-.401.087.85.85 0 0 1-.478-.132.83.83 0 0 1-.299-.392 1.7 1.7 0 0 1-.102-.627zm8.239 2.238h-.953l-1.338-3.999h.917l.896 3.138h.038l.888-3.138h.879z"/>
-                            </svg>
-                        </td>                                
-                        `
-                    }
-                    else {
-                        rowHtml += `<td id='mot_calibration_files_row_${i}_cdnUrl'>
-                                      <img data-image="true" class='mot-calibration-image-preview' style='height: 50px; width: 50px;' src="${url}">
-                                    </td>`;
-                      }
-                  
-                      rowHtml += `
-                        <td>
-                          <i class="bi bi-trash data-launch-subgrid-delete-document-item" data-name='${image.name}' data-row-id='${i}' data-id='${image.id}'></i>
-                        </td>  
-                        </tr>
-                      `;
-                      return rowHtml;
+                const allImages = res || []
+                // Separate serial evidence from general docs
+                const serialEvidence = allImages.filter(img => img.record_type === 'calibration_serial_evidence')
+                const generalDocs = allImages.filter(img => img.record_type !== 'calibration_serial_evidence')
+                this.motCalibrationDocumentFiles = generalDocs
+                this.existingSerialEvidenceCount = serialEvidence.length
+
+                // Display serial evidence photo in the Serial Verification card
+                if (serialEvidence.length > 0) {
+                    const latest = serialEvidence[serialEvidence.length - 1]
+                    getImageDocUrl(latest.name).then(url => {
+                        const img = document.getElementById('mcw-serial-evidence-img')
+                        if (img) img.src = url
+                        const preview = document.getElementById('mcw-serial-evidence-preview')
+                        if (preview) preview.classList.add('active')
+                        const zone = document.getElementById('mcw-evidence-zone')
+                        if (zone) zone.classList.add('has-file')
+                        const fullview = document.getElementById('mcw-serial-evidence-fullview')
+                        if (fullview) { fullview.href = url; fullview.target = '_blank' }
+                        this._updateCalibrationSaveState()
+                    }).catch(err => {
+                        console.error('Error loading serial evidence URL:', err)
                     })
-                  );
-                  
-                  Promise.all(htmlPromises)
-                    .then(rows => {
-                      // Join all rows together and inject into the DOM
-                      const html = rows.join('');
-                      document.getElementById(`garageMotCalibrationsDocumentsTableBody_${this.id}`).innerHTML = html;
+                }
+
+                // Display general documents in the table
+                if (generalDocs.length > 0) {
+                    if (docTable) docTable.style.display = 'table'
+                    let htmlPromises = generalDocs.map((image, i) =>
+                        getImageDocUrl(image.name).then(url => {
+                            let rowHtml = `<tr id='mot_calibration_files_row_${i}'>
+                                <td>${image.name.substring(0, 25)}</td>`
+                            const fileType = image.name.split('.').pop().toLowerCase()
+                            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileType)) {
+                                rowHtml += `<td><img style='height:40px;width:40px;border-radius:4px;object-fit:cover;' src="${url}"></td>`
+                            } else if (fileType === 'pdf') {
+                                rowHtml += `<td><i class="bi bi-file-earmark-pdf" style="font-size:20px;color:#e74c3c;"></i></td>`
+                            } else {
+                                rowHtml += `<td><i class="bi bi-file-earmark" style="font-size:20px;color:#667085;"></i></td>`
+                            }
+                            rowHtml += `<td><i class="bi bi-trash data-launch-subgrid-delete-document-item" data-name='${image.name}' data-row-id='${i}' data-id='${image.id}'></i></td></tr>`
+                            return rowHtml
+                        })
+                    )
+                    Promise.all(htmlPromises).then(rows => {
+                        document.getElementById(`garageMotCalibrationsDocumentsTableBody_${this.id}`).innerHTML = rows.join('')
+                    }).catch(err => {
+                        console.error('Error building document table:', err)
                     })
-                    .catch(err => {
-                      console.error('Error building HTML:', err);
-                    });
-                  
+                }
 
+                // Update save state
+                this._updateCalibrationSaveState()
 
-
-
-
-                // let html = ''
-                // for (let i = 0; i < imageData.length; i++) {
-                //     getImageDocUrl(imageData[i].name).then(
-                //         url => {
-                //             // console.log('url is ', url)
-                //             html += `
-                //                 <tr id='mot_calibration_files_row_${i}'>
-                //                     <td id='mot_calibration_files_row_${i}_name'>${imageData[i].name.substring(0, 20)}</td>
-                //                     `
-        
-                //             let fileType = imageData[i].name.split('.').pop();
-                //             if (fileType === 'txt') {
-                //                 html += `
-                //                 <td>
-                //                     <svg data-name="${imageData[i].name}" data-image="false" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-filetype-txt mot-calibration-image-preview" src="${url}" viewBox="0 0 16 16">
-                //                         <path fill-rule="evenodd" d="M14 4.5V14a2 2 0 0 1-2 2h-2v-1h2a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v9H2V2a2 2 0 0 1 2-2h5.5zM1.928 15.849v-3.337h1.136v-.662H0v.662h1.134v3.337zm4.689-3.999h-.894L4.9 13.289h-.035l-.832-1.439h-.932l1.228 1.983-1.24 2.016h.862l.853-1.415h.035l.85 1.415h.907l-1.253-1.992zm1.93.662v3.337h-.794v-3.337H6.619v-.662h3.064v.662H8.546Z"/>
-                //                     </svg>
-                //                 </td>
-                //                 `
-                //             }
-                //             else {
-                //                 html += `<td id='mot_calibration_files_row_${i}_cdnUrl'>
-                //                             <img data-image="true" class='mot-calibration-image-preview' style='height: 50px; width: 50px;' src="${url}">
-                //                         </td>`
-                //             }                    
-                //             html += `
-                //                     <td>
-                //                         <i class="bi bi-trash data-launch-subgrid-delete-document-item" data-name='${imageData[i].name}' data-row-id='${i}' data-id='${imageData[i].id}'></i>
-                //                     </td>  
-                //                 </tr>
-                //             `   
-                //         },
-                //         err => {
-                //             console.error(err)
-                //         }
-                //     )                             
-                // }
-                // document.getElementById(`garageMotCalibrationsDocumentsTableBody_${this.id}`).innerHTML = html
             },
             err => {
-                // console.log('error', err)
+                console.error("Error fetching calibration images:", err)
             }
         )
     }
-
 
     //// MOT EQUIPMENT MODAL
     showMotEquipmentModal() {
@@ -9870,6 +10175,25 @@ showGarageBayModalDetails(id) {
                 break;
             }
         }
+        if (!record) {
+            this.showCRUDAlert('Could not load booking details. Refreshing bookings...', 'error');
+            this.injectDataIntoGarageBookingsSubgrid();
+            document.getElementById('garageBookingModal').style.display = 'none';
+            return;
+        }
+
+        const toDateInputValue = (value) => {
+            if (!value) return '';
+            const str = String(value);
+            if (str.includes('T')) return str.split('T')[0];
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+            return '';
+        };
+        const toTimeInputValue = (value) => {
+            if (!value) return '';
+            const str = String(value);
+            return str.length >= 5 ? str.slice(0, 5) : str;
+        };
 
         document.getElementById('vehicleReg').value = record.vehicle_reg || '';
         document.getElementById('vehicleMake').value = record.vehicle_make || '';
@@ -9889,18 +10213,14 @@ showGarageBayModalDetails(id) {
         document.getElementById('data-launch-garage-work-completed').checked = record.status_work_completed || false;
 
 
-        if (record.booking_date) {
-            let formattedDate = record.booking_date.split('T')[0];
-            document.getElementById('bookingDate').value = formattedDate;
-        }
+        document.getElementById('bookingDate').value = toDateInputValue(record.booking_date);
         if (record.mot_due_date) {
             if (record.mot_due_date !== "1899-11-30T00:00:00.000Z") {
-                let formattedDate = record.mot_due_date.split('T')[0];
-                document.getElementById('motDueDate').value = formattedDate || ''
+                document.getElementById('motDueDate').value = toDateInputValue(record.mot_due_date)
             }          
         }
-        document.getElementById('timeStart').value = record.time_start || '';
-        document.getElementById('timeEnd').value = record.time_end || '';
+        document.getElementById('timeStart').value = toTimeInputValue(record.time_start);
+        document.getElementById('timeEnd').value = toTimeInputValue(record.time_end);
         // document.getElementById('vehicleArrived').checked = record.vehicle_arrived || false;
         document.getElementById('motCompleted').checked = record.mot_completed || false;
         document.getElementById('garageBookingRecordId').value = record.id || '';
@@ -9913,7 +10233,7 @@ showGarageBayModalDetails(id) {
             }
         )
         document.getElementById('garageBookingsBay').innerHTML = html;
-        document.getElementById('garageBookingsBay').value = record.bay || '';
+        document.getElementById('garageBookingsBay').value = record.bay != null ? String(record.bay) : '';
     }
     /// GARAGE BOOKINGS SUBGRID HANDLERS
     ///// SAVE NEW OR EXISTING RECORD
@@ -9934,7 +10254,7 @@ showGarageBayModalDetails(id) {
         const timeEnd = document.getElementById('timeEnd').value;
         // const vehicleArrived = document.getElementById('vehicleArrived').checked;
         const motCompleted = document.getElementById('motCompleted').checked;
-        const bay = document.getElementById('garageBookingsBay').value;
+        const bay = parseInt(document.getElementById('garageBookingsBay').value, 10);
         const garageBookingRecordId = document.getElementById('garageBookingRecordId').value;
         const notes = document.getElementById('garageBookingNotes').value;
 
@@ -9970,26 +10290,40 @@ showGarageBayModalDetails(id) {
             status_work_completed: workCompleted
         };
 
+        // Preserve current week context before re-render
+        const savedWeekOffset = this.garageBookingsSubgridClass?.currentWeekOffset || 0;
+
         if (garageBookingRecordId === "") {
-            // Sending the data to the server to create a new record
+            // Creating new record
             this.secureAction('create', 'data_launch_garage_bookings', null, garageBookingData).then(res => {
-                this.injectDataIntoGarageBookingsSubgrid();
+                this.showCRUDAlert('Booking created successfully', 'success');
+                document.getElementById('garageBookingModal').style.display = 'none';
+                // Await the full re-fetch+re-render, THEN restore week if needed
+                this.injectDataIntoGarageBookingsSubgrid().then(() => {
+                    if (savedWeekOffset !== 0 && this.garageBookingsSubgridClass) {
+                        this.garageBookingsSubgridClass.render(null, null, savedWeekOffset, 'garageBookings');
+                    }
+                });
             }, err => { 
-                console.error(err); 
+                console.error(err);
+                this.showCRUDAlert('Failed to create booking — please try again', 'error');
             });
         } else {
-            // Updating the existing record
+            // Updating existing record
             let recordId = parseInt(garageBookingRecordId);
             garageBookingData.id = recordId;
             this.secureAction('update', 'data_launch_garage_bookings', recordId, garageBookingData).then(res => {
-                for (let i = 0; i < this.garageBookingsData.length; i++) {
-                    if (this.garageBookingsData[i].id === recordId) {
-                        this.garageBookingsData[i] = res;
-                    }        
-                }
-                this.injectDataIntoGarageBookingsSubgrid();
+                this.showCRUDAlert('Booking updated successfully', 'success');
+                document.getElementById('garageBookingModal').style.display = 'none';
+                // Await the full re-fetch+re-render, THEN restore week if needed
+                this.injectDataIntoGarageBookingsSubgrid().then(() => {
+                    if (savedWeekOffset !== 0 && this.garageBookingsSubgridClass) {
+                        this.garageBookingsSubgridClass.render(null, null, savedWeekOffset, 'garageBookings');
+                    }
+                });
             }, err => { 
-                console.error(err); 
+                console.error(err);
+                this.showCRUDAlert('Failed to update booking — please try again', 'error');
             });
         }
     }
@@ -10618,6 +10952,9 @@ function openTab(evt, tabName, context) {
   
   // Initialize first tab as active
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('.tab-button').click();
+    const firstTabButton = document.querySelector('.tab-button');
+    if (firstTabButton) {
+        firstTabButton.click();
+    }
   });
   

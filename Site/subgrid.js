@@ -7,11 +7,11 @@ class SubGrid {
       this.rows = rows
       this.baysData = baysData
       this.colors = ["#3c9df4", "#1a1736"]; 
-      if (operatingHours) {
-        operatingHours.end++
-      }
-      this.operatingStart = (operatingHours?.start || 8) * 60; // Convert hours to minutes
-      this.operatingFinish = (operatingHours?.end || 18) * 60; // Convert hours to minutes
+      // Use a local copy to avoid mutating the shared operatingHours object
+      const opStart = operatingHours?.start || 8;
+      const opEnd   = operatingHours?.end   || 18;
+      this.operatingStart  = opStart * 60;           // Convert hours to minutes
+      this.operatingFinish = (opEnd + 1) * 60;       // +1 so the grid extends to cover the final hour
       this.operatingDuration = this.operatingFinish - this.operatingStart
       this.operatingDays = operatingDays || ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
       this.weekCache = {}; // cache for daysData, keyed by Monday's date string
@@ -306,32 +306,53 @@ class SubGrid {
           this.container.innerHTML = html;
         }
         else if (this.type === 'motsiteaudits') {
+          const auditTypeLabels = { routine: 'Routine', follow_up: 'Follow-Up', dvsa_prep: 'DVSA Prep', complaint: 'Complaint-Led', new_site: 'New Site' };
           html += `<table class="table table-hover data-launch-table-clickable-row notes-table" style='width: 100%; table-layout: fixed;'>
           <thead>
               <tr>
-                  <th style="width: 20%;">Consultant</th>
-                  <th style="width: 20%;">Auditor</th>
-                  <th style="width: 20%;">Date</th>
-                  <th style="width: 5%;"></th>
+                  <th style="width: 8%;">Score</th>
+                  <th style="width: 12%;">Auditor</th>
+                  <th style="width: 12%;">Date</th>
+                  <th style="width: 12%;">Audit Type</th>
+                  <th style="width: 8%;">Status</th>
+                  <th style="width: 12%;">Consultant</th>
+                  <th style="width: 4%;"></th>
               </tr>
             </thead>
             <tbody id="motsiteaudit_tbody_${this.id}">
           `;
-          this.data.forEach(row =>  {
+          this.data.sort((a, b) => {
+            const da = a.date ? new Date(a.date) : new Date(0);
+            const db = b.date ? new Date(b.date) : new Date(0);
+            return db - da;
+          });
+          this.data.forEach(row => {
+            const score = row.score_percentage != null ? parseFloat(row.score_percentage) : null;
+            let scoreBadge = '<span style="color:#94a3b8;font-size:12px">—</span>';
+            if (score !== null) {
+              const scoreColor = score >= 80 ? '#27ae60' : score >= 50 ? '#f39c12' : '#e74c3c';
+              scoreBadge = `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px;color:#fff;background:${scoreColor}">${score}%</span>`;
+            }
+            const auditTypeLabel = auditTypeLabels[row.audit_type] || row.audit_type || '—';
+            const statusBadge = row.status === 'complete'
+              ? '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#e8f5e9;color:#2e7d32">Complete</span>'
+              : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#fff3e0;color:#e65100">Draft</span>';
+
+            let dateFormatted = '';
+            if (row.date) {
+              let fd = row.date.split('T')[0];
+              dateFormatted = this.getFormattedDate(fd);
+            }
+
             html += `<tr class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}' id='motsiteaudit_${this.id}_${row.id}'>
-                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${row.consultant}</td>
-                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${row.auditor}</td>
-                      `
-                      if (row.date) {
-                          let formattedDate = row.date.split('T')[0];
-                          html += `<td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${this.getFormattedDate(formattedDate)}</td>`
-                      }
-                      else {
-                          html += `<td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'></td>`
-                      }
-            html += `
+                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${scoreBadge}</td>
+                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${row.auditor || ''}</td>
+                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${dateFormatted}</td>
+                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${auditTypeLabel}</td>
+                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${statusBadge}</td>
+                      <td class='data-launch-table-clickable-mot-site-audit-record' data-id='${row.id}'>${row.consultant || ''}</td>
                       <td><i class="bi bi-trash data-launch-subgrid-delete-mot-site-audit-item" data-id='${row.id}'></i></td>             
-                  </tr>`
+                  </tr>`;
           });
           html += `</tbody></table>`;
           this.container.innerHTML = html;
@@ -340,21 +361,46 @@ class SubGrid {
         html += `<table class="table table-hover data-launch-table-clickable-row notes-table" style='width: 100%; table-layout: fixed;'>
           <thead>
             <tr>
-                <th style="width: 20%;">Tester Name</th>
-                <th style="width: 20%;">Vehicle Reg</th>
-                <th style="width: 20%;">Date of QC</th>
-                <th style="width: 20%;">QC Carried out by</th>
+                <th style="width: 7%;">Score</th>
+                <th style="width: 18%;">Tester Name</th>
+                <th style="width: 15%;">Vehicle Reg</th>
+                <th style="width: 15%;">Date of QC</th>
+                <th style="width: 12%;">QC Type</th>
+                <th style="width: 18%;">QC Carried out by</th>
+                <th style="width: 10%;">Status</th>
                 <th style="width: 5%;"></th>
             </tr>
           </thead>
           <tbody id="qccheckers_tbody_${this.id}">
         `;
-        console.log('this.data that needs sorting Liam qccheckers', this.data)
         this.data.sort((a, b) => new Date(b.date_of_qc) - new Date(a.date_of_qc));
         this.data.forEach(row => {
+          // Traffic light score badge
+          let scoreBadge = '';
+          if (row.score_percentage !== null && row.score_percentage !== undefined) {
+            const pct = parseFloat(row.score_percentage);
+            const bgColor = pct >= 80 ? '#27ae60' : pct >= 50 ? '#f39c12' : '#e74c3c';
+            scoreBadge = `<span style="display:inline-block;background:${bgColor};color:#fff;padding:3px 8px;border-radius:12px;font-size:12px;font-weight:700;min-width:42px;text-align:center;">${pct}%</span>`;
+          } else {
+            scoreBadge = `<span style="color:#94a3b8;font-size:12px;">—</span>`;
+          }
+          // Status badge
+          let statusBadge = '';
+          if (row.status === 'complete') {
+            statusBadge = `<span style="display:inline-block;background:#e8f5e9;color:#27ae60;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;">Complete</span>`;
+          } else if (row.status === 'draft') {
+            statusBadge = `<span style="display:inline-block;background:#fff3e0;color:#f39c12;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;">Draft</span>`;
+          } else {
+            statusBadge = `<span style="color:#94a3b8;font-size:11px;">—</span>`;
+          }
+          // QC Type label
+          const qcTypeLabels = { routine: 'Routine', targeted: 'Targeted', remedial: 'Remedial', closely_observed: 'Observed', reinspection: 'Re-inspection' };
+          const qcTypeLabel = row.qc_type ? (qcTypeLabels[row.qc_type] || row.qc_type) : '—';
+
           html += `<tr class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}' id='qccheckers_${this.id}_${row.id}'>
-                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${row.tester_name}</td>
-                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${row.vehicle_reg}</td>`
+                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${scoreBadge}</td>
+                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${row.tester_name || ''}</td>
+                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}' style="text-transform:uppercase;font-weight:600;">${row.vehicle_reg || ''}</td>`
                     if (row.date_of_qc) {
                       let formattedDate = row.date_of_qc.split('T')[0];
                       html += `<td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${this.getFormattedDate(formattedDate)}</td>`
@@ -363,7 +409,9 @@ class SubGrid {
                       html += `<td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'></td>`
                   }
           html += `
-                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${row.qc_carried_out_by}</td>
+                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${qcTypeLabel}</td>
+                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${row.qc_carried_out_by || ''}</td>
+                    <td class='data-launch-table-clickable-qc-checker-record' data-id='${row.id}'>${statusBadge}</td>
                     <td><i class="bi bi-trash data-launch-subgrid-delete-qc-checker-item" data-id='${row.id}'></i></td>             
                 </tr>`
       });
@@ -386,56 +434,44 @@ class SubGrid {
             return;
         }
        
-        html += `<div id="booking-status-key-wrapper" style="display: flex; justify-content: center;margin-bottom:2px;">
-                                <div id="booking-status-key" style="display: flex; flex-wrap: wrap; gap: 12px; font-family: sans-serif; font-size: 14px;">
-                                  <div style="display: flex; align-items: center;">
-                                    <span style="width: 20px; height: 20px; background-color: #759AF7; display: inline-block; border: 1px solid #aaa; margin-right: 6px;"></span>
-                                    Booking Made
-                                  </div>
-                                  <div style="display: flex; align-items: center;">
-                                    <span style="width: 20px; height: 20px; background-color: #E4ADFB; display: inline-block; border: 1px solid #aaa; margin-right: 6px;"></span>
-                                    Vehicle Arrived On Site
-                                  </div>
-                                  <div style="display: flex; align-items: center;">
-                                    <span style="width: 20px; height: 20px; background-color: #F5E77F; display: inline-block; border: 1px solid #aaa; margin-right: 6px;"></span>
-                                    Work In Progress
-                                  </div>
-                                  <div style="display: flex; align-items: center;">
-                                    <span style="width: 20px; height: 20px; background-color: #C4EAA2; display: inline-block; border: 1px solid #aaa; margin-right: 6px;"></span>
-                                    Work Completed
-                                  </div>
-                                </div>
-                            </div>
-                <div id="navContainer" style="text-align:center; margin-bottom:10px; height: 37px;">`
+        // ── Booking Diary — redesigned header & toolbar ──
+        html += `<div class="bd-toolbar-wrapper">
+                    <div class="bd-toolbar">
+                      <div class="bd-toolbar-left">`
                 if (this.viewType === 'bayGrid') {
-                    html += `     
-                              <input type="date" id="monthPicker" style="display: inline-block; width: 135px; float: left;">
-                             `
-                  }
-                  html += `                  
-                  <select style="display: inline-block; width: 200px; float: left; margin-left: 23px;" class="data-launch-bookings-subgrid-grid-type-select-element" id="data-launch-bookings-subgrid-grid-type-select-element_${this.id}">
-                  `
-                  if (this.viewType === 'bayGrid') {
-                    html += ` <option value="list">List View</option>
-                              <option value="bayGrid" selected>Bay Grid</option>`
-                  }
-                  else {
-                             html += `
-                             <option value="list" selected>List View</option>
-                              <option value="bayGrid">Bay Grid</option>`
-                  }
-                  html += `</select>`
-                  if (this.viewType === 'bayGrid') {
-                    html += `<button style="float: left; margin-left: 20px; height: 37px; text-align: center;" class="prevWeekBtn" id="prevWeekBtn">&lt; Prev Week</button>
-                             <button style="float: left; margin-left: 20px; height: 37px; text-align: center;" class="nextWeekBtn" id="nextWeekBtn">Next Week &gt;</button>`
-                  }
-                  else {
-                    html += `<button class="data-launch-bookings-list-print">Print  <i class="bi bi-printer"></i></button>`
-                  }
-                  if (USER_RECORD.bookings_create === 1) {
-                    html += `<button class="data-launch-create-new-booking-record" style="float:right;" data-launch-garage-id='${this.id}'>
-                               <i class="bi bi-plus-circle"></i> Add New Booking Record</button>`
-                  }
+                    html += `<input type="date" id="monthPicker" class="bd-date-picker">`
+                }
+                html += `<select class="bd-view-select data-launch-bookings-subgrid-grid-type-select-element" id="data-launch-bookings-subgrid-grid-type-select-element_${this.id}">`
+                if (this.viewType === 'bayGrid') {
+                    html += `<option value="list">List View</option><option value="bayGrid" selected>Bay Grid</option>`
+                } else {
+                    html += `<option value="list" selected>List View</option><option value="bayGrid">Bay Grid</option>`
+                }
+                html += `</select>`
+                if (this.viewType === 'bayGrid') {
+                    html += `<div class="bd-nav-group">
+                              <button class="bd-nav-btn prevWeekBtn" id="prevWeekBtn"><i class="bi bi-chevron-left"></i> Prev</button>
+                              <button class="bd-today-btn todayBtn" id="todayBtn">Today</button>
+                              <button class="bd-nav-btn nextWeekBtn" id="nextWeekBtn">Next <i class="bi bi-chevron-right"></i></button>
+                             </div>`
+                } else {
+                    html += `<button class="bd-nav-btn data-launch-bookings-list-print"><i class="bi bi-printer"></i> Print</button>`
+                }
+                html += `</div><div class="bd-toolbar-right">`
+                if (USER_RECORD.bookings_create === 1) {
+                    html += `<button class="bd-add-btn data-launch-create-new-booking-record" data-launch-garage-id='${this.id}'>
+                               <i class="bi bi-plus-circle"></i> New Booking</button>`
+                }
+                html += `</div></div>
+                    <div class="bd-legend">
+                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#759AF7;"></span>Booked</div>
+                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#E4ADFB;"></span>On Site</div>
+                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#F5E77F;"></span>In Progress</div>
+                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#C4EAA2;"></span>Complete</div>
+                      <div class="bd-legend-hint"><i class="bi bi-arrows-move"></i> Drag to reschedule</div>
+                    </div>
+                  </div>
+                <div id="navContainer" style="display:none;">`
                   html += `</div>`
         
         if (this.viewType === 'bayGrid') {
@@ -509,11 +545,12 @@ class SubGrid {
       
       
       const timeColumn = document.getElementById("timeColumn");
-      timeColumn.innerHTML = ""; // Clear previous time slots
-      
-      timeColumn.innerHTML = `<div id="navToggle" style="cursor: pointer; text-align: left; width: 80px; background-color: #1abc9c; color: white; margin-bottom: 3px; height: 50px;">
-                    <span id="navToggleArrow">Hide &#x25BC;</span> <!-- down arrow initially -->
-                  </div>`
+      timeColumn.innerHTML = "";
+      // Time column header cell (aligns with day headers)
+      const timeHeaderCell = document.createElement("div");
+      timeHeaderCell.className = "bd-time-header-cell";
+      timeHeaderCell.innerHTML = '<i class="bi bi-clock"></i>';
+      timeColumn.appendChild(timeHeaderCell);
       for (let t = this.operatingStart; t <= this.operatingFinish; t += 60) {
           const marker = document.createElement("div");
           marker.className = "time-marker";
@@ -523,17 +560,6 @@ class SubGrid {
       }
       const totalHeight = this.timeHeaderHeight + this.BAY_HEADER_HEIGHT + this.operatingDuration;
       document.getElementById("timeColumn").style.height = totalHeight + "px";
-      const toggleArrow = document.getElementById("navToggleArrow");
-      const nav = document.getElementById("navContainer");
-      toggleArrow.addEventListener("click", () => {
-        if (nav.classList.contains("hidden")) {
-          nav.classList.remove("hidden");
-          toggleArrow.innerHTML = "Hide &#x25BC;";
-        } else {
-          nav.classList.add("hidden");
-          toggleArrow.innerHTML = "Options &#x25BC;";
-        }
-      }) 
       
       const daysColumns = document.getElementById("daysColumns");
       daysColumns.innerHTML = ""; // Clear previous entries
@@ -542,9 +568,13 @@ class SubGrid {
           const dayCol = document.createElement("div");
           dayCol.className = "day-column";
       
+          const dateStr = this.formatDate(dayObj.date);
+          dayCol.dataset.date = dateStr;
+          const isToday = dateStr === this.formatDate(new Date());
+          if (isToday) dayCol.classList.add('today-column');
           const dayHeader = document.createElement("div");
-          dayHeader.className = "day-header";
-          dayHeader.innerText = `${dayObj.day} ${this.formatDate(dayObj.date)}`;
+          dayHeader.className = "day-header" + (isToday ? " today-header" : "");
+          dayHeader.innerText = `${dayObj.day} ${dateStr}`;
           dayCol.appendChild(dayHeader);
       
           const baysContainer = document.createElement("div");
@@ -557,6 +587,7 @@ class SubGrid {
               const bay = document.createElement("div");
               bay.className = "bay";
               bay.setAttribute("data-increment", bayData.increment);
+              bay.setAttribute("data-bay-id", bayData.id);
               bay.style.height = this.operatingDuration + "px"; // ✅ Add this line
               bay.style.backgroundImage = "linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)";
               bay.style.backgroundSize = `100% ${bayData.increment}px`;
@@ -573,92 +604,55 @@ class SubGrid {
 
        
 
-              // ✅ Add new timeslots (without affecting existing functionality)
+              // Timeslot grid — clickable areas for creating new bookings
               for (let time = this.operatingStart; time < this.operatingFinish; time += bayData.increment) {
                   const timeslot = document.createElement("div");
                   timeslot.className = "timeslot";
-                  // timeslot.style.top = (time - this.operatingStart + this.BAY_HEADER_HEIGHT) + "px";
-                  // timeslot.style.height = bayData.increment + "px";
-                  // timeslot.dataset.time = this.formatTime(time);
-                  // timeslot.dataset.bay = bayData.name;
-                  // timeslot.dataset.date = this.formatDate(dayObj.date);
-                  // timeslot.dataset.increment = bayData.increment
-
-                  timeslot.style.top = (this.BAY_HEADER_HEIGHT + ((time - this.operatingStart) / bayData.increment) * bayData.increment) + "px";
+                  timeslot.style.top = (this.BAY_HEADER_HEIGHT + (time - this.operatingStart)) + "px";
                   timeslot.style.height = bayData.increment + "px";
-                  
-                  // Directly use `time`, do NOT recompute using slotIndex
                   timeslot.dataset.time = this.formatTime(time);
                   timeslot.dataset.bay = bayData.name;
-                  timeslot.dataset.date = this.formatDate(dayObj.date);
+                  timeslot.dataset.date = dateStr;
                   timeslot.dataset.increment = bayData.increment;
 
-                  timeslot.addEventListener("mouseenter", () => {
-                    timeslot.style.transform = "scaleY(1.1)";
-                    timeslot.style.backgroundColor = "rgba(0, 128, 255, 0.3)"; // Subtle highlight
-                    timeslot.style.border = "1px solid #0078D4"; // Slight outline effect
+                  // Consolidated hover handlers
+                  timeslot.addEventListener("mouseenter", (e) => {
+                    timeslot.style.transform = "scaleY(1.05)";
+                    timeslot.style.backgroundColor = "rgba(0, 128, 255, 0.15)";
+                    timeslot.style.border = "1px solid rgba(0,120,212,0.4)";
                     timeslot.style.cursor = "pointer";
-                    timeslot.style.width = "100%"
-                });
-            
-                timeslot.addEventListener("mouseleave", () => {
-                    timeslot.style.transform = "scale(1)";
-                    timeslot.style.backgroundColor = ""; // Reset background
-                    timeslot.style.border = ""; // Reset border
-                    timeslot.style.left = '0px'
-                    timeslot.style.width = "auto"
-                });
-
-
-              timeslot.addEventListener('mouseover', (e) => {             
-                const bayElement = e.target.closest('.bay'); 
-                if (!bayElement) return;
-            
-                const bayId = timeslot.dataset.bay;
-                const date = timeslot.dataset.date;
-            
-                // // console.log('timeslot.dataset', timeslot.dataset);
-            
-                // Get correct bay increment from dataset
-                const bayIncrement = parseInt(timeslot.dataset.increment, 10) || 30;  // Default to 30 mins
-            
-                // Compute slotIndex correctly
-                const slotIndex = Math.floor((e.target.offsetTop - this.BAY_HEADER_HEIGHT) / bayIncrement); 
-            
-                // Compute the correct time using bayIncrement
-                const hoveredTime = this.operatingStart + (slotIndex * bayIncrement);
-            
-                // Convert to HH:MM format
-                const hours = Math.floor(hoveredTime / 60);
-                const minutes = hoveredTime % 60;
-                const formattedTime = `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}`;
-                timeslot.dataset.time = formattedTime;                
-                // // console.log(`Selected time: ${formattedTime}, Bay: ${bayId}, Date: ${date}`);
-            
-                // Display Tooltip
-                let tooltip = document.getElementById('hover-time-tooltip');
-                if (!tooltip) {
-                    tooltip = document.createElement('div');
-                    tooltip.id = 'hover-time-tooltip';
-                    tooltip.style.position = 'absolute';
-                    tooltip.style.background = 'black';
-                    tooltip.style.color = 'white';
-                    tooltip.style.padding = '5px';
-                    tooltip.style.borderRadius = '3px';
-                    tooltip.style.fontSize = '12px';
-                    tooltip.style.pointerEvents = 'none';
-                    document.body.appendChild(tooltip);
-                }
-            
-                tooltip.innerText = `${formattedTime}`;
-                tooltip.style.top = `${e.pageY + 10}px`;
-                tooltip.style.left = `${e.pageX + 10}px`;
-                tooltip.style.display = 'block';
-            
-                timeslot.addEventListener('mouseleave', () => {
-                    tooltip.style.display = 'none';
-                });
-            });
+                    // Show time tooltip
+                    let tooltip = document.getElementById('hover-time-tooltip');
+                    if (!tooltip) {
+                        tooltip = document.createElement('div');
+                        tooltip.id = 'hover-time-tooltip';
+                        Object.assign(tooltip.style, {
+                          position: 'absolute', background: '#1a1a2e', color: 'white',
+                          padding: '4px 8px', borderRadius: '4px', fontSize: '12px',
+                          fontWeight: '600', pointerEvents: 'none', zIndex: '999999',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                        });
+                        document.body.appendChild(tooltip);
+                    }
+                    tooltip.innerText = timeslot.dataset.time;
+                    tooltip.style.top = (e.pageY + 10) + 'px';
+                    tooltip.style.left = (e.pageX + 10) + 'px';
+                    tooltip.style.display = 'block';
+                  });
+                  timeslot.addEventListener("mousemove", (e) => {
+                    const tooltip = document.getElementById('hover-time-tooltip');
+                    if (tooltip) {
+                      tooltip.style.top = (e.pageY + 10) + 'px';
+                      tooltip.style.left = (e.pageX + 10) + 'px';
+                    }
+                  });
+                  timeslot.addEventListener("mouseleave", () => {
+                    timeslot.style.transform = "";
+                    timeslot.style.backgroundColor = "";
+                    timeslot.style.border = "";
+                    const tooltip = document.getElementById('hover-time-tooltip');
+                    if (tooltip) tooltip.style.display = 'none';
+                  });
             
 
                   // ✅ Click event to trigger the booking modal
@@ -688,7 +682,16 @@ class SubGrid {
       });
       this.resizingBaysArray = []
       this.data.forEach(row => {
-                      let formattedDate = row.booking_date.split('T')[0];
+                      if (!row || !row.booking_date || !row.time_start || !row.time_end) {
+                        console.error('[BOOKING RENDER] skipping malformed row:', row);
+                        return;
+                      }
+                      const rawBookingDate = String(row.booking_date);
+                      let formattedDate = rawBookingDate.includes('T') ? rawBookingDate.split('T')[0] : rawBookingDate;
+                      if (!/^\d{4}-\d{2}-\d{2}$/.test(formattedDate)) {
+                        console.error('[BOOKING RENDER] invalid booking_date format:', row.booking_date, '| id:', row.id);
+                        return;
+                      }
                       let date = this.getFormattedDate(formattedDate)
                       let reg = row.vehicle_reg
                       let make = row.vehicle_make
@@ -711,28 +714,23 @@ class SubGrid {
                       const endMinutes = this.timeStringToMinutes(endTime);     // 540
 
                       const duration = endMinutes - startMinutes;          // 60
-                      // let bayName = this.baysData.find(rowBay => rowBay.id === bay)?.bay_name;
-                      let bayName = this.baysData.find(rowBay => rowBay.id === bay)?.bay_name?.trimEnd();
-                      // Now call createEvent with these values:
-                      // // console.log('CREATE EVENT FUNCTION', {formattedDate, bayName, startMinutes, duration, reg, id})
-                      this.createEvent(formattedDate, bayName, startMinutes, duration, reg, id, startTime, endTime, notes, workCompleted,vehicleInProgress,vehicleArrived,bookingMade);
+                      let bayName = this.baysData.find(rowBay => parseInt(rowBay.id) === parseInt(bay))?.bay_name?.trim();
+                      if (!bayName) {
+                        console.error('[BOOKING RENDER] BAY NAME NOT FOUND for booking', id, reg, '| row.bay =', bay, typeof bay, '| baysData IDs =', this.baysData.map(b => b.id + '(' + typeof b.id + ')'));
+                      }
+                      this.createEvent(formattedDate, bayName, bay, startMinutes, duration, reg, id, startTime, endTime, notes, workCompleted,vehicleInProgress,vehicleArrived,bookingMade, firstName, lastName);
       })
       // 🔥 Force recalculation of booking widths **AFTER** render
       // Wait until all bookings are added before running layoutBay
 
-      setTimeout(() => {
-        // // console.log("✅ Running layoutBay for all bays...");
-        if (document.querySelectorAll(".event").length === 0) {
-          console.warn('there  are not elements with .event in the DOM? ???')
-          return
-        }
-        else {
-          console.warn('there ARE elements with .event in the DOM? ???', document.querySelectorAll(".event").length)
-        }
-        const uniqueBays = [...new Set(this.resizingBaysArray)]; // Remove duplicates
-        uniqueBays.forEach(bay => this.layoutBay(bay));
-        this.resizingBaysArray = []; // Clear after execution
-      }, 1800);
+      // Use requestAnimationFrame for faster, more reliable layout
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const uniqueBays = [...new Set(this.resizingBaysArray)];
+          uniqueBays.forEach(bay => this.layoutBay(bay));
+          this.resizingBaysArray = [];
+        });
+      });
 
 
     
@@ -867,33 +865,46 @@ class SubGrid {
     }
 
     else if (this.type === 'qcCheckersForBike') {
+      const qcTypeLabels = { routine: 'Routine', targeted: 'Targeted', remedial: 'Remedial', closely_observed: 'Closely Observed', reinspection: 'Re-inspection' };
       html += `<table class="table table-hover data-launch-table-clickable-row notes-table" style='width: 100%; table-layout: fixed;'>
       <thead>
           <tr>
-              <th style="width: 10%;">Tester Name</th>
+              <th style="width: 12%;">Tester Name</th>
               <th style="width: 10%;">Vehicle Reg</th>
-              <th style="width: 15%;">Date of QC</th>
+              <th style="width: 12%;">Date of QC</th>
+              <th style="width: 10%;">Score</th>
+              <th style="width: 10%;">QC Type</th>
+              <th style="width: 8%;">Status</th>
               <th style="width: 10%;">QC Carried out by</th>
-              <th style="width: 10%;">Vehicle Class</th>
-              <th style="width: 10%;">Name QC Checker</th>
               <th style="width: 3% !important;"></th>
           </tr>
         </thead>
         <tbody id="qcCheckersForBike_tbody_${this.id}">
       `;
-      console.log('this.data that needs sorting Liam qcCheckersForBike', this.data)
       this.data.sort((a, b) => new Date(b.date_of_qc) - new Date(a.date_of_qc));
-      this.data.forEach(row => 
-      html += `<tr class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}' id='qcCheckersForBike_${this.id}_${row.id}'>
+      this.data.forEach(row => {
+        const score = row.score_percentage != null ? parseFloat(row.score_percentage) : null;
+        let scoreBadge = '<span style="color:#94a3b8;font-size:12px">—</span>';
+        if (score !== null) {
+          const scoreColor = score >= 80 ? '#27ae60' : score >= 50 ? '#f39c12' : '#e74c3c';
+          scoreBadge = `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px;color:#fff;background:${scoreColor}">${score}%</span>`;
+        }
+        const qcTypeLabel = qcTypeLabels[row.qc_type] || row.qc_type || '—';
+        const statusBadge = row.status === 'complete'
+          ? '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#e8f5e9;color:#2e7d32">Complete</span>'
+          : '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#fff3e0;color:#e65100">Draft</span>';
+
+        html += `<tr class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}' id='qcCheckersForBike_${this.id}_${row.id}'>
                   <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${row.tester_name}</td>
                   <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${row.vehicle_reg}</td>
                   <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${this.getFormattedDate(row.date_of_qc)}</td>
-                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${row.qc_carried_out_by}</td>
-                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${row.vehicle_class}</td>
-                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${row.name_qc_checker}</td>
+                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${scoreBadge}</td>
+                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${qcTypeLabel}</td>
+                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${statusBadge}</td>
+                  <td class='data-launch-table-clickable-qc-checker-bike-record' data-id='${row.id}'>${row.qc_carried_out_by || ''}</td>
                   <td><i class="bi bi-trash data-launch-subgrid-delete-qc-checker-bike-item" data-id='${row.id}'></i></td>             
-              </tr>`
-      );
+              </tr>`;
+      });
       html += `</tbody></table>`;
       this.container.innerHTML = html;
     }
@@ -1412,59 +1423,56 @@ addMinutesToTime(startTime, minutesToAdd) {
     this.layoutBay(targetBay);
     
 
-    this.showCRUDAlert('Booking has not been moved \n This functionality is in progress \n The existing booking date & time will NOT have changed', 'error')
-    // // console.log('tooltip', tooltip)
-    // // console.log('dropevent', e.target.dataset)
-    // // console.log('finalTime', finalTime)
-    // // console.log('need to update this record value ', this.recordBeingDraggedId )
-    // // console.log('this.baysData', this.baysData)
-    // // console.log('timeStr', timeStr)
-    // let newBayID;
-    // this.baysData.forEach(bay => {
-    //   if (bay.bay_name === e.target.dataset.bay) {
-    //     newBayID = bay.id
-    //   }
-    // })
-    // let endTime = this.addMinutesToTime(timeStr, this.recordBeingDraggedDuration)
-    // // console.log('START TIME OF EVENT',e.target.dataset.time)
-    // // console.log('END TIME OF EVENT', endTime)
-    // let obj = {
-    //   booking_date: e.target.dataset.date,
-    //   time_start: timeStr,
-    //   time_end: endTime,
-    //   bay: newBayID
-    // }
+    // Determine the target bay ID directly from the data-bay-id attribute
+    let newBayID = parseInt(targetBay.getAttribute('data-bay-id'));
+    if (isNaN(newBayID)) {
+      // Fallback to text matching if data attribute missing
+      const targetBayName = targetBay.querySelector('.bay-header')?.innerText?.trim();
+      this.baysData.forEach(b => {
+        if (b.bay_name?.trim() === targetBayName) {
+          newBayID = b.id;
+        }
+      });
+      console.error('[DRAG] data-bay-id missing, fell back to text match. newBayID:', newBayID);
+    }
+    if (isNaN(newBayID)) {
+      this.showCRUDAlert('Could not determine target bay. Please try again.', 'error');
+      garageClassInstantiated.injectDataIntoGarageBookingsSubgrid();
+      this.dragEventElem = null;
+      this.sourceBay = null;
+      return;
+    }
+    
+    // Get date from the parent day-column
+    const dayColumn = targetBay.closest('.day-column') || targetBay.parentElement?.closest('.day-column');
+    const dropDate = dayColumn?.dataset?.date;
+    
+    const endTime = this.addMinutesToTime(timeStr, Number(this.recordBeingDraggedDuration));
+    const updateObj = {
+      time_start: timeStr,
+      time_end: endTime,
+      bay: newBayID
+    };
+    // If dropped on a different day, also update booking_date
+    if (dropDate) {
+      updateObj.booking_date = dropDate;
+    }
 
-    //     this.secureAction('update', 'data_launch_garage_bookings', parseInt(this.recordBeingDraggedId), obj).then(res => {
-    //         // console.log('data_launch_garage_bookings res', res);
-    //         for (let i = 0; i < garageClassInstantiated.garageBookingsData.length; i++) {
-    //             if (garageClassInstantiated.garageBookingsData[i].id === parseInt(this.recordBeingDraggedId)) {
-    //               garageClassInstantiated.garageBookingsData[i] = res;
-    //             }        
-    //         }
-    //         garageClassInstantiated.injectDataIntoGarageBookingsSubgrid();
-    //     }, err => { 
-    //         console.error(err); 
-    // });
-
-
-    // this.secureAction('update', 'data_launch_garage_bookings', parseInt(this.recordBeingDraggedId), obj).then(res => {
-    //         // console.log('data_launch_garage_bookings res', res);
-    //         this.garageBookingsSubgridClass.render(null, null, 0, 'garageBookings')
-    //         this.garageBookingsData.forEach(booking => {
-    //           if (booking.id === parseInt(this.recordBeingDraggedId)) {
-    //             booking = res
-    //           }
-    //         })
-    //         this.data.forEach(booking => {
-    //           if (booking.id === parseInt(this.recordBeingDraggedId)) {
-    //             booking = res
-    //           }
-    //         })
-    //     }, err => { 
-    //         console.error(err); 
-    // });
-
+    const recordId = parseInt(this.recordBeingDraggedId);
+    this.secureAction('update', 'data_launch_garage_bookings', recordId, updateObj).then(res => {
+        this.showCRUDAlert('Booking moved to ' + timeStr + ' successfully', 'success');
+        const savedWeekOffset = this.currentWeekOffset || 0;
+        garageClassInstantiated.injectDataIntoGarageBookingsSubgrid().then(() => {
+          if (savedWeekOffset !== 0 && garageClassInstantiated.garageBookingsSubgridClass) {
+            garageClassInstantiated.garageBookingsSubgridClass.render(null, null, savedWeekOffset, 'garageBookings');
+          }
+        });
+    }, err => {
+        console.error(err);
+        this.showCRUDAlert('Failed to move booking — please try again', 'error');
+        // Re-render to reset visual state
+        garageClassInstantiated.injectDataIntoGarageBookingsSubgrid();
+    });
 
     this.dragEventElem = null;
     this.sourceBay = null;
@@ -2039,7 +2047,7 @@ addMinutesToTime(startTime, minutesToAdd) {
  }
  
   
-  createEvent(eventDate, bayName, startMinute, duration, text, id ,startTime, endTime, notes, workCompleted,vehicleInProgress,vehicleArrived,bookingMade) {
+  createEvent(eventDate, bayName, bayId, startMinute, duration, text, id, startTime, endTime, notes, workCompleted, vehicleInProgress, vehicleArrived, bookingMade, firstName, lastName) {
     const eventDateObj = new Date(eventDate);
     const eventDateStr = eventDateObj.toISOString().split("T")[0];
 
@@ -2050,111 +2058,104 @@ addMinutesToTime(startTime, minutesToAdd) {
     const eventDateNorm = this.normalize(eventDateObj);
     
     if (eventDateNorm < currentWeekMonday || eventDateNorm > currentWeekSunday) {
-      // // console.log("Skipping event outside of current week:", eventDateStr);
       return;
     }
 
     let dayObj = this.daysData.find(d => d.date.toISOString().split("T")[0] === eventDateStr);
     if (!dayObj) {
-        console.error("Event date not found in current week:", eventDateStr);
+        console.error("[createEvent FAIL] date not in daysData:", eventDateStr, "| id:", id, text);
         return;
     }
 
-    // Find the correct column for the event
-    const dayCol = Array.from(document.getElementsByClassName("day-column"))
-        .find(dc => dc.querySelector(".day-header").innerText.startsWith(dayObj.day));
-    if (!dayCol) return;
+    // Find the correct day column inside THIS subgrid instance only
+    const allDayCols = Array.from(this.container.getElementsByClassName("day-column"));
+    const dayCol = allDayCols.find(dc => dc.dataset.date === eventDateStr);
+    if (!dayCol) {
+        console.error("[createEvent FAIL] dayCol not found for day:", dayObj.day, "| id:", id, text, "| all day-columns:", allDayCols.map(dc => dc.querySelector(".day-header")?.innerText));
+        return;
+    }
 
-    const bay = Array.from(dayCol.getElementsByClassName("bay"))
-        .find(b => b.querySelector(".bay-header").innerText.trimEnd() === bayName.trimEnd());
-    if (!bay) return;
+    const allBays = Array.from(dayCol.getElementsByClassName("bay"));
+    const bayHeaders = allBays.map(b => b.querySelector(".bay-header")?.innerText?.trim());
+    const bay = allBays.find(b => parseInt(b.getAttribute('data-bay-id')) === parseInt(bayId))
+      || allBays.find(b => b.querySelector(".bay-header").innerText.trim() === (bayName || '').trim());
+    if (!bay) {
+        console.error("[createEvent FAIL] bay not found! bayId:", bayId, "| bayName:", JSON.stringify(bayName), "| available:", bayHeaders, "| available IDs:", allBays.map(b => b.getAttribute('data-bay-id')), "| id:", id, text);
+        return;
+    }
 
-    // Create the event element
+    // Status label + icon
+    let statusLabel = 'Booked';
+    let statusIcon = '📅';
+    if (workCompleted === 1)          { statusLabel = 'Complete';    statusIcon = '✅'; }
+    else if (vehicleInProgress === 1) { statusLabel = 'In Progress'; statusIcon = '🔧'; }
+    else if (vehicleArrived === 1)    { statusLabel = 'On Site';     statusIcon = '🚗'; }
+
+    const customerName = ((firstName || '') + ' ' + (lastName || '')).trim();
+    const timeLabel = this.formatTime(startMinute) + '–' + this.formatTime(startMinute + duration);
+    const minHeight = Math.max(duration, 28);
+
+    // Create the event element with rich content
     const eventElem = document.createElement("div");
     eventElem.className = "event data-launch-table-clickable-garage-booking-record";
-    eventElem.innerText = text;
+    eventElem.setAttribute("data-id", id);
     eventElem.style.top = (startMinute - this.operatingStart + this.BAY_HEADER_HEIGHT) + "px";
-    eventElem.style.height = duration + "px"
+    eventElem.style.height = minHeight + "px";
     eventElem.dataset.duration = duration;
     eventElem.dataset.start = startMinute;
     eventElem.dataset.recordId = id;
     eventElem.dataset.id = id;
-    eventElem.dataset.metadata = this.getMetaData(eventDate,bayName,duration,text, notes);
-    eventElem.style.backgroundColor = this.getRandomHex(workCompleted,vehicleInProgress,vehicleArrived,bookingMade)
-    eventElem.style.color = 'black'
-    eventElem.style.fontWeight = 'bold';
-    eventElem.style.textTransform = 'uppercase';
-    eventElem.style.textAlign = 'center';
-    // eventElem.setAttribute("draggable", "true");
-    // eventElem.addEventListener("dragstart", (e) => this.onDragStart(e));
+    eventElem.style.backgroundColor = this.getRandomHex(workCompleted, vehicleInProgress, vehicleArrived, bookingMade);
+    eventElem.style.color = '#1a1a2e';
+    eventElem.style.overflow = 'hidden';
+    eventElem.style.cursor = 'pointer';
+    eventElem.style.borderLeft = '3px solid rgba(0,0,0,0.2)';
+    eventElem.style.padding = '2px 4px';
+    eventElem.style.lineHeight = '1.2';
+    eventElem.style.boxSizing = 'border-box';
 
+    // Rich inner HTML — show time, reg, customer name depending on available height
+    if (minHeight >= 50) {
+      eventElem.innerHTML = `<div style="font-size:10px;font-weight:600;opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${timeLabel}</div><div style="font-size:12px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text || ''}</div><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${customerName || ''}</div>`;
+    } else if (minHeight >= 35) {
+      eventElem.innerHTML = `<div style="font-size:11px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text || ''}</div><div style="font-size:9px;opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${timeLabel}</div>`;
+    } else {
+      eventElem.innerHTML = `<div style="font-size:10px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text || ''}</div>`;
+    }
+
+    // Enable drag-and-drop
+    eventElem.setAttribute("draggable", "true");
+    eventElem.addEventListener("dragstart", (e) => this.onDragStart(e));
+
+    // Rich tooltip with full booking details
     const tooltip = document.createElement("div");
     tooltip.className = "tooltip";
-    tooltip.innerHTML = "Time: " + this.formatTime(startMinute) + " - " +
-                        this.formatTime(startMinute + duration) +
-                        "<br>" + eventElem.dataset.metadata + "<br>" + `<button class='btn btn-primary data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record' data-id="${id}">Open Booking</button>
-                        <br><br><a class='data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record-duplicate' data-id="${id}">Duplicate in Non MOT Bay</a>
-                        <br><i class='bi bi-trash data-launch-subgrid-delete-garage-booking-item-bay-grid-view bay-grid-view-delete-button' data-id="${id}"></i> `;
+    tooltip.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">${statusIcon} ${text || 'No Reg'} <span style="font-weight:400;font-size:11px;opacity:0.7;">— ${statusLabel}</span></div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12px;"><span style="opacity:0.6;">Time</span><span>${this.formatTime(startMinute)} – ${this.formatTime(startMinute + duration)}</span><span style="opacity:0.6;">Duration</span><span>${duration} mins</span><span style="opacity:0.6;">Bay</span><span>${bayName || '—'}</span><span style="opacity:0.6;">Date</span><span>${eventDate}</span>${customerName ? `<span style="opacity:0.6;">Customer</span><span>${customerName}</span>` : ''}${notes ? `<span style="opacity:0.6;">Notes</span><span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${notes}</span>` : ''}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-primary data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record" data-id="${id}" style="font-size:11px;padding:4px 10px;border-radius:4px;">Open</button><a class="data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record-duplicate" data-id="${id}" style="font-size:11px;padding:4px 10px;border-radius:4px;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;text-decoration:none;">Duplicate</a><i class="bi bi-trash data-launch-subgrid-delete-garage-booking-item-bay-grid-view bay-grid-view-delete-button" data-id="${id}" style="font-size:14px;padding:4px;cursor:pointer;opacity:0.7;"></i></div>`;
     tooltip.style.position = "absolute";
-                        
-    // tooltip.style.top = "10%";  // positions below the event element
     tooltip.style.left = "0";
-    tooltip.style.marginTop = "5px"; // adjust this value as needed
-    tooltip.style.height = 'fit-content';
-
-    const rect = eventElem.getBoundingClientRect();
-    const offset = 5; // gap between event and tooltip
-
-    // Determine vertical position:
-    if (rect.top < 50) {
-      // Not enough room above—place tooltip below the event.
-      tooltip.style.top = (rect.bottom + window.scrollY + offset + 15) - 10 + "px";
-    } else {
-      // Enough room above—place tooltip above the event.
-      tooltip.style.top = (rect.top + window.scrollY - tooltip.offsetHeight - offset) - 10 + "px";
-    }
-
-    // Determine horizontal position:
-    if (rect.left < 100) {
-      // If too far left, position tooltip to the right.
-      tooltip.style.left = (rect.right + window.scrollX + offset - 15) + "px";
-    } else {
-      // Otherwise, align it with the left side of the event.
-      tooltip.style.left = (rect.left + window.scrollX) + "px";
-    }
-
-    // Make sure the tooltip is on top.
-    tooltip.style.position = "absolute";
+    tooltip.style.bottom = "100%";
+    tooltip.style.marginBottom = "4px";
     tooltip.style.zIndex = "999999";
-
+    tooltip.style.minWidth = "240px";
 
     eventElem.appendChild(tooltip);
-
     bay.appendChild(eventElem);
-  
-    // this.layoutBay(bay)
-    this.resizingBaysArray.push(bay)
+    this.resizingBaysArray.push(bay);
 
-    // Show tooltip when mouse enters the event element.
+    // Tooltip hover behavior
     eventElem.addEventListener("mouseenter", () => {
       tooltip.style.display = "block";
     });
-
-    // When leaving the event element, only hide if the mouse isn’t going into the tooltip.
     eventElem.addEventListener("mouseleave", (e) => {
       if (!tooltip.contains(e.relatedTarget)) {
         tooltip.style.display = "none";
       }
     });
-
-    // Keep the tooltip visible while the mouse is over it.
     tooltip.addEventListener("mouseleave", (e) => {
       if (!eventElem.contains(e.relatedTarget)) {
         tooltip.style.display = "none";
       }
     });
-
-}
- 
+  }
 
 }
