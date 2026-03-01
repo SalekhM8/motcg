@@ -2676,6 +2676,34 @@ class Garage {
             });
         }
     }
+    _getFrontendFlags() {
+        if (!this.frontendFlagsPromise) {
+            this.frontendFlagsPromise = fetch('/api/frontend-flags')
+                .then(res => res.ok ? res.json() : {})
+                .catch(() => ({}));
+        }
+        return this.frontendFlagsPromise;
+    }
+    _isDateBeforeToday(value) {
+        if (!value) return false;
+        const raw = String(value).trim();
+        let parsed = null;
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+            parsed = new Date(`${raw}T00:00:00`);
+        } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+            const [dd, mm, yyyy] = raw.split('/');
+            parsed = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+        } else {
+            parsed = new Date(raw);
+        }
+
+        if (!parsed || Number.isNaN(parsed.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        parsed.setHours(0, 0, 0, 0);
+        return parsed < today;
+    }
     injectDataIntoMotSiteAuditsSubgrid () {
         if (!this.isUserAuthorized('read', 'data_launch_mot_site_audits')) {
             document.getElementById('data-launch-garage-mot-site-audits-cont').innerHTML = 
@@ -2683,10 +2711,17 @@ class Garage {
              <h3 style='text-align:center'> Please contact your Administrator</h3>`
         }
         else {  
-            fetchData('data_launch_mot_site_audits', 1000, 0, null, this.id).then(data => {
+            Promise.all([
+                fetchData('data_launch_mot_site_audits', 1000, 0, null, this.id),
+                this._getFrontendFlags()
+            ]).then(([data, flags]) => {
                 // console.log(`Data for garage_id: ${this.id} `, data);
-                this.motSiteAuditData = data
-                new SubGrid(data, 'data-launch-garage-mot-site-audits-cont', 'motsiteaudits',  this.id);            
+                const hidePast = flags && flags.hidePastQcAudits === true;
+                const filteredData = hidePast
+                    ? (data || []).filter(row => !this._isDateBeforeToday(row.date))
+                    : (data || []);
+                this.motSiteAuditData = filteredData
+                new SubGrid(filteredData, 'data-launch-garage-mot-site-audits-cont', 'motsiteaudits',  this.id);            
             });
         }
     }
@@ -2697,10 +2732,17 @@ class Garage {
              <h3 style='text-align:center'> Please contact your Administrator</h3>`
         }
         else {  
-            fetchData('data_launch_qc_checkers_for_car', 1000, 0, null, this.id).then(data => {
+            Promise.all([
+                fetchData('data_launch_qc_checkers_for_car', 1000, 0, null, this.id),
+                this._getFrontendFlags()
+            ]).then(([data, flags]) => {
                 // console.log(`data_launch_qc_checkers_for_car for garage_id: ${this.id} `, data);
-                this.qcCheckerData = data
-                new SubGrid(data, 'data-launch-garage-qc-checkers-cont', 'qccheckers',  this.id);            
+                const hidePast = flags && flags.hidePastQcAudits === true;
+                const filteredData = hidePast
+                    ? (data || []).filter(row => !this._isDateBeforeToday(row.date_of_qc))
+                    : (data || []);
+                this.qcCheckerData = filteredData
+                new SubGrid(filteredData, 'data-launch-garage-qc-checkers-cont', 'qccheckers',  this.id);            
             });
         }
     }
@@ -2844,10 +2886,17 @@ class Garage {
              <h3 style='text-align:center'> Please contact your Administrator</h3>`
         }
         else {  
-            fetchData('data_launch_qc_checkers_for_bike', 1000, 0, null, this.id).then(data => {
+            Promise.all([
+                fetchData('data_launch_qc_checkers_for_bike', 1000, 0, null, this.id),
+                this._getFrontendFlags()
+            ]).then(([data, flags]) => {
                 // // console.log(`data_launch_qc_checkers_for_bike for garage_id: ${this.id} `, data);
-                this.qcCheckersForBikeData = data
-                new SubGrid(data, 'data-launch-qc-checkers-for-bikes-subgrid-cont', 'qcCheckersForBike',  this.id);            
+                const hidePast = flags && flags.hidePastQcAudits === true;
+                const filteredData = hidePast
+                    ? (data || []).filter(row => !this._isDateBeforeToday(row.date_of_qc))
+                    : (data || []);
+                this.qcCheckersForBikeData = filteredData
+                new SubGrid(filteredData, 'data-launch-qc-checkers-for-bikes-subgrid-cont', 'qcCheckersForBike',  this.id);            
             });
         }
     }

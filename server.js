@@ -604,6 +604,7 @@ app.use((req, res, next) => {
 // Safety guard: block mutating endpoints in non-production unless explicitly enabled.
 const isNonProd = process.env.NODE_ENV !== 'production';
 const allowDbWrites = process.env.ALLOW_DB_WRITES === 'true';
+const hidePastQcAudits = process.env.HIDE_PAST_QC_AUDITS === 'true';
 app.use((req, res, next) => {
   const isMutatingMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   const isProtectedWriteEndpoint = req.path.startsWith('/api/') || req.path === '/upload';
@@ -615,6 +616,12 @@ app.use((req, res, next) => {
   }
 
   next();
+});
+
+app.get('/api/frontend-flags', (req, res) => {
+  res.json({
+    hidePastQcAudits
+  });
 });
 
 // const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
