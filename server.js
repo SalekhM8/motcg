@@ -563,6 +563,12 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/api/frontend-flags', (req, res) => {
+  res.json({
+    hidePastQcAudits: process.env.HIDE_PAST_QC_AUDITS === 'true'
+  });
+});
+
 // const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 app.post('/api/mot-reconciliation/delete-file', async (req, res) => {
