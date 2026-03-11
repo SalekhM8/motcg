@@ -69,7 +69,6 @@ class AddGarageWizard {
 
     document.getElementById('agw-close-btn').addEventListener('click', () => this.close());
     document.getElementById('agw-prev-btn').addEventListener('click', () => this.prevStep());
-    document.getElementById('agw-next-btn').addEventListener('click', () => this.nextStep());
   }
 
   /* ── Open the wizard ────────────────────────────────────── */
