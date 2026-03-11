@@ -40,6 +40,8 @@ class Garage {
         if (param) {
             this.data = garageData
         }
+        let consultantNames = [...new Set((this.data || []).map(r => r.consultant_name_garage).filter(Boolean))].sort()
+        let consultantOptions = consultantNames.map(n => `<option value="${n}">${n}</option>`).join('')
         let html = `
          <!-- Delete Confirmation Modal -->
                                     <div id="delModal" class="del-confirmation-modal">
@@ -71,9 +73,13 @@ class Garage {
                                         </div>
                                         </div>
                                     </div>
-        <div class="container">
-            <input style="width: 100%;" type="text" class="data-launch-garage-global-filter-input" id="data-launch-garage-global-filter-input" placeholder="Search">
-            <i class="bi bi-arrow-counterclockwise data-launch-reset-filters-icon data-launch-table-reset-all-garage-filters"></i>  
+        <div class="container" style="display: flex; gap: 10px; align-items: center; padding-top: 8px; padding-bottom: 8px;">
+            <input style="flex: 1;" type="text" class="data-launch-garage-global-filter-input" id="data-launch-garage-global-filter-input" placeholder="Search">
+            <select class="data-launch-filter-search" data-launch-header="consultant_name_garage" id="data-launch-consultant-filter" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 180px;">
+                <option value="">All Consultants</option>
+                ${consultantOptions}
+            </select>
+            <i class="bi bi-arrow-counterclockwise data-launch-reset-filters-icon data-launch-table-reset-all-garage-filters" style="cursor: pointer;"></i>
         </div>
         <!-- Page wrapper/Container Section -->
         <div class="container" style="height: 92vh; overflow-y: auto;">
@@ -88,6 +94,7 @@ class Garage {
                         <th class="responsive-table__head__title responsive-table__head__title--name"   scope="col">Last</th>                        
                         <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Postcode</th>
                         <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Phone</th>
+                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Consultant</th>
                         <th></th>
                         <th class="responsive-table__head__title responsive-table__head__title--status" scope="col"></th>
                         <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Archive?                          
@@ -137,9 +144,10 @@ class Garage {
                 <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Last Name"       data-export-val="${data[i].contact_surname_garage}" scope="row">${typeof data[i].contact_surname_garage === 'undefined' ? '': data[i].contact_surname_garage}</td>
                 <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Postcode"       data-export-val="${data[i].vts_postcode_garage}" scope="row">${typeof data[i].vts_postcode_garage === 'undefined' ? '': data[i].vts_postcode_garage}</td>
                 <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Phone"   data-export-val="${data[i].contact_main_number_garage}" scope="row">${typeof data[i].contact_main_number_garage === 'undefined' ? '': data[i].contact_main_number_garage}</td>
+                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Consultant" data-export-val="${data[i].consultant_name_garage || ''}" scope="row">${data[i].consultant_name_garage || ''}</td>
                 <td></td>
                 <td></td>
-                <td><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}'></i></td>                 
+                <td><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}'></i></td>
             </tr>`
             exportRow++           
         }
@@ -175,9 +183,10 @@ class Garage {
                     <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Last Name"                data-export-val="${data[i].contact_surname_garage}" scope="row">${typeof data[i].contact_surname_garage === 'undefined' ? '': data[i].contact_surname_garage}</td>
                     <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Postcode"                data-export-val="${data[i].vts_postcode_garage}" scope="row">${typeof data[i].vts_postcode_garage === 'undefined' ? '': data[i].vts_postcode_garage}</td>
                     <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Phone"          data-export-val="${data[i].contact_main_number_garage}" scope="row">${typeof data[i].contact_main_number_garage === 'undefined' ? '': data[i].contact_main_number_garage}</td>
+                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Consultant" data-export-val="${data[i].consultant_name_garage || ''}" scope="row">${data[i].consultant_name_garage || ''}</td>
                     <td></td>
                     <td></td>
-                    <td><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}'></i></td>                  
+                    <td><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}'></i></td>
                 </tr>`
                 exportRow++           
             }
@@ -1950,14 +1959,13 @@ class Garage {
                     this.closeModal()
                 }
                 else if (event.target.classList.contains('data-launch-table-garages-new-record')) {
-                    // // console.log('clicked new record')
-                    this.openForm(false)
+                    addGarageWizard.open(this)
                 }
                 else if (event.target.classList.contains('data-launch-send-sms')) {
                     this.sendSMS()
                 }
                 else if (event.target.classList.contains('data-launch-nav-menu-plus-icon')) {
-                    this.openForm(false)
+                    addGarageWizard.open(this)
                 }       
                 else if (event.target.classList.contains('data-launch-associated-new-garage-record')) {
                     this.openAssociateNewGarageWindow()
@@ -2397,7 +2405,7 @@ class Garage {
                     const value = filter.value;
 
                     // Check if the data item matches the current filter
-                    if (!(data[i][header].toUpperCase().includes(value.toUpperCase()) || data[i][header].includes(value))) {
+                    if (!((data[i][header] || '').toUpperCase().includes(value.toUpperCase()) || (data[i][header] || '').includes(value))) {
                         // If the data item doesn't match the current filter, set matchAllFilters to false and break the loop
                         matchAllFilters = false;
                         break;
@@ -2416,7 +2424,7 @@ class Garage {
             // console.log('filterApply LANDED HERE    else if (this.filters.length === 0) {    ', header, value, filterJustRemoved)  
             this.filters.push({header: header, value: value})
             for (let i = 0; i < this.data.length; i++) {
-                if (this.data[i][header].toUpperCase().includes(value.toUpperCase()) || this.data[i][header].includes(value)) {
+                if ((this.data[i][header] || '').toUpperCase().includes(value.toUpperCase()) || (this.data[i][header] || '').includes(value)) {
                     this.filteredData.push(this.data[i])
                 }                
             }
@@ -2457,7 +2465,7 @@ class Garage {
                     const value = filter.value;
 
                     // Check if the data item matches the current filter
-                    if (!(data[i][header].toUpperCase().includes(value.toUpperCase()) || data[i][header].includes(value))) {
+                    if (!((data[i][header] || '').toUpperCase().includes(value.toUpperCase()) || (data[i][header] || '').includes(value))) {
                         // If the data item doesn't match the current filter, set matchAllFilters to false and break the loop
                         matchAllFilters = false;
                         break;
@@ -2481,12 +2489,16 @@ class Garage {
         this.filterApply(header, value, true)
     }
     filterResetAll () {
+        this.filteredData = []
+        this.filters = []
         let table = document.getElementById("data-launch-garage-list-view-table-el");
         let tr = table.getElementsByTagName("tr");
         for (let i = 0; i < tr.length; i++) {
             tr[i].style.display = 'grid'
         }
         document.getElementById('data-launch-garage-global-filter-input').value = ''
+        let consultantFilter = document.getElementById('data-launch-consultant-filter')
+        if (consultantFilter) consultantFilter.value = ''
         // this.filteredData = []
         // this.filters = []
         // let x = Array.from(document.getElementsByClassName('data-launch-filter-search'))

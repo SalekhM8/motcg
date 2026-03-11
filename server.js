@@ -624,6 +624,48 @@ app.get('/api/frontend-flags', (req, res) => {
   });
 });
 
+// Internal Audit Report — consultant activity summary
+app.get('/api/internal-audit/consultant-summary', (req, res) => {
+  pool.getConnection((err, connection) => {
+    if (err) return res.status(500).json({ error: 'DB connection error' });
+
+    const queries = {
+      garages: `SELECT id, trading_name_garage, consultant_name_garage, lead_consultant_name_garage,
+                       charge_rate_garage, payment_type_garage, package_required_garage,
+                       vts_site_number_garage, vts_postcode_garage
+                FROM data_launch_garage_records
+                WHERE IFNULL(data_launch_marked_for_deletion, 0) != 1`,
+      audits: `SELECT id, garage_id, consultant, auditor, date, audit_type,
+                      score_percentage, status, site_audit_findings, notes
+               FROM data_launch_mot_site_audits
+               WHERE IFNULL(data_launch_marked_for_deletion, 0) != 1`,
+      qcChecks: `SELECT id, garage_id, consultant, date_of_qc, score_percentage,
+                        status, tester_name, vehicle_reg, qc_type, qc_carried_out_by
+                 FROM data_launch_qc_checkers_for_car
+                 WHERE IFNULL(data_launch_marked_for_deletion, 0) != 1`
+    };
+
+    const results = {};
+    const keys = Object.keys(queries);
+    let completed = 0;
+
+    keys.forEach(key => {
+      connection.query(queries[key], (error, rows) => {
+        if (error) {
+          connection.release();
+          return res.status(500).json({ error: `Query error on ${key}` });
+        }
+        results[key] = rows;
+        completed++;
+        if (completed === keys.length) {
+          connection.release();
+          res.json(results);
+        }
+      });
+    });
+  });
+});
+
 // const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 app.post('/api/mot-reconciliation/delete-file', async (req, res) => {

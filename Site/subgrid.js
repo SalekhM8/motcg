@@ -27,6 +27,11 @@ class SubGrid {
       this.dragOffsetY = 0;
       this.sourceBay = null;
       this.daysData = [];
+      // Bay visibility: default to all bays visible
+      this.activeBays = new Set();
+      if (this.baysData && this.baysData.length > 0) {
+        this.baysData.forEach(b => this.activeBays.add(b.id));
+      }
       if (id) {
         this.id = id
       }
@@ -434,60 +439,72 @@ class SubGrid {
             return;
         }
        
-        // ── Booking Diary — redesigned header & toolbar ──
-        html += `<div class="bd-toolbar-wrapper">
-                    <div class="bd-toolbar">
-                      <div class="bd-toolbar-left">`
-                if (this.viewType === 'bayGrid') {
-                    html += `<input type="date" id="monthPicker" class="bd-date-picker">`
-                }
-                html += `<select class="bd-view-select data-launch-bookings-subgrid-grid-type-select-element" id="data-launch-bookings-subgrid-grid-type-select-element_${this.id}">`
-                if (this.viewType === 'bayGrid') {
-                    html += `<option value="list">List View</option><option value="bayGrid" selected>Bay Grid</option>`
-                } else {
-                    html += `<option value="list" selected>List View</option><option value="bayGrid">Bay Grid</option>`
-                }
-                html += `</select>`
-                if (this.viewType === 'bayGrid') {
-                    html += `<div class="bd-nav-group">
-                              <button class="bd-nav-btn prevWeekBtn" id="prevWeekBtn"><i class="bi bi-chevron-left"></i> Prev</button>
-                              <button class="bd-today-btn todayBtn" id="todayBtn">Today</button>
-                              <button class="bd-nav-btn nextWeekBtn" id="nextWeekBtn">Next <i class="bi bi-chevron-right"></i></button>
-                             </div>`
-                } else {
-                    html += `<button class="bd-nav-btn data-launch-bookings-list-print"><i class="bi bi-printer"></i> Print</button>`
-                }
-                html += `</div><div class="bd-toolbar-right">`
-                if (USER_RECORD.bookings_create === 1) {
-                    html += `<button class="bd-add-btn data-launch-create-new-booking-record" data-launch-garage-id='${this.id}'>
-                               <i class="bi bi-plus-circle"></i> New Booking</button>`
-                }
-                html += `</div></div>
-                    <div class="bd-legend">
-                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#759AF7;"></span>Booked</div>
-                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#E4ADFB;"></span>On Site</div>
-                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#F5E77F;"></span>In Progress</div>
-                      <div class="bd-legend-item"><span class="bd-legend-dot" style="background:#C4EAA2;"></span>Complete</div>
-                      <div class="bd-legend-hint"><i class="bi bi-arrows-move"></i> Drag to reschedule</div>
-                    </div>
-                  </div>
-                <div id="navContainer" style="display:none;">`
-                  html += `</div>`
+        // ── Booking Diary V2 — bay visibility + clean toolbar ──
+        this.container.classList.add('bd-v2');
+        html += `<div class="bd-bay-visibility" id="bd-bay-visibility">
+                   <span class="bd-bay-vis-label"><i class="bi bi-eye"></i> Bay Visibility</span>`
+        this.baysData.forEach(bay => {
+          html += `<label class="bd-bay-checkbox">
+                     <input type="checkbox" class="bd-bay-toggle" data-bay-id="${bay.id}" ${this.activeBays.has(bay.id) ? 'checked' : ''}>
+                     <span>${bay.bay_name}</span>
+                   </label>`
+        });
+        html += `</div>`
+
+        html += `<div class="bd-toolbar-v2">
+                    <div class="bd-toolbar-left-v2">`
+        if (this.viewType === 'bayGrid') {
+            html += `<input type="date" id="monthPicker" class="bd-date-picker-v2">`
+            html += `<div class="bd-nav-group-v2">
+                       <button class="bd-nav-btn-v2 prevWeekBtn" id="prevWeekBtn"><i class="bi bi-chevron-left"></i> Prev</button>
+                       <button class="bd-today-btn-v2 todayBtn" id="todayBtn">Today</button>
+                       <button class="bd-nav-btn-v2 nextWeekBtn" id="nextWeekBtn">Next <i class="bi bi-chevron-right"></i></button>
+                     </div>`
+            html += `<span class="bd-week-range" id="bd-week-range"></span>`
+        } else {
+            html += `<button class="bd-nav-btn-v2 data-launch-bookings-list-print"><i class="bi bi-printer"></i> Print</button>`
+        }
+        html += `</div><div class="bd-toolbar-right-v2">`
+        html += `<select class="bd-view-select-v2 data-launch-bookings-subgrid-grid-type-select-element" id="data-launch-bookings-subgrid-grid-type-select-element_${this.id}">`
+        if (this.viewType === 'bayGrid') {
+            html += `<option value="list">List View</option><option value="bayGrid" selected>Bay Grid</option>`
+        } else {
+            html += `<option value="list" selected>List View</option><option value="bayGrid">Bay Grid</option>`
+        }
+        html += `</select>`
+        if (USER_RECORD.bookings_create === 1) {
+            html += `<button class="bd-add-btn-v2 data-launch-create-new-booking-record" data-launch-garage-id='${this.id}'>
+                       <i class="bi bi-plus-circle"></i> New Booking</button>`
+        }
+        html += `</div></div>`
+        html += `<div id="navContainer" style="display:none;"></div>`
         
+        html += `<div class="bd-content-wrapper">`
+        html += `<div class="bd-calendar-area">`
         if (this.viewType === 'bayGrid') {
           html += `<div id="garageBookingsCalendarContainer" class="calendar-container">`
         }
         else {
-           html += `<div id="garageBookingsCalendarContainer"  class="calendar-container inactive">`
+           html += `<div id="garageBookingsCalendarContainer" class="calendar-container inactive">`
         }
-        
+
         html += `
                   <div class="time-column" id="timeColumn">
                     <div class="time-header"></div>
                   </div>
                   <div class="days-columns" id="daysColumns"></div>
                 </div>
-          `
+                <div class="bd-legend-v2">
+                  <div class="bd-legend-item-v2"><span class="bd-legend-dot-v2" style="background:#4A90D9;"></span>Booked</div>
+                  <div class="bd-legend-item-v2"><span class="bd-legend-dot-v2" style="background:#F5A623;"></span>Waiting</div>
+                  <div class="bd-legend-item-v2"><span class="bd-legend-dot-v2" style="background:#E85D3A;"></span>In Progress</div>
+                  <div class="bd-legend-item-v2"><span class="bd-legend-dot-v2" style="background:#5CB85C;"></span>Completed</div>
+                  <div class="bd-legend-item-v2"><span class="bd-legend-dot-v2" style="background:#999;"></span>Cancelled</div>
+                  <div class="bd-legend-hint-v2"><i class="bi bi-arrows-move"></i> Drag to reschedule</div>
+                </div>
+              </div>
+              <div class="bd-sidebar" id="bd-sidebar"></div>
+            </div>`
           // console.log('this.baysData', this.baysData)
 
 
@@ -574,7 +591,10 @@ class SubGrid {
           if (isToday) dayCol.classList.add('today-column');
           const dayHeader = document.createElement("div");
           dayHeader.className = "day-header" + (isToday ? " today-header" : "");
-          dayHeader.innerText = `${dayObj.day} ${dateStr}`;
+          const dayShort = dayObj.day.substring(0, 3);
+          const dayNum = dayObj.date.getDate();
+          const activeBayNames = dayObj.bays.filter(b => this.activeBays.has(b.id)).map(b => b.name);
+          dayHeader.innerHTML = `<div>${dayShort} ${dayNum}</div>${activeBayNames.length === 1 ? `<div class="bd-day-bay-label">${activeBayNames[0]}</div>` : ''}`;
           dayCol.appendChild(dayHeader);
       
           const baysContainer = document.createElement("div");
@@ -582,7 +602,7 @@ class SubGrid {
           // baysContainer.style.height = this.operatingDuration + "px";
           baysContainer.style.height = totalHeight + "px"; // same 650px as timeColumn
       
-          dayObj.bays.forEach(bayData => {
+          dayObj.bays.filter(b => this.activeBays.has(b.id)).forEach(bayData => {
             // // console.log('bayData', bayData)
               const bay = document.createElement("div");
               bay.className = "bay";
@@ -737,6 +757,94 @@ class SubGrid {
 
       if (document.getElementById("monthPicker")) {
         document.getElementById("monthPicker").value = this.formatDate(this.daysData[0].date);
+      }
+
+      // ── Bay visibility checkbox binding ──
+      this.container.querySelectorAll('.bd-bay-toggle').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const bayId = parseInt(cb.dataset.bayId);
+          if (cb.checked) { this.activeBays.add(bayId); }
+          else { this.activeBays.delete(bayId); }
+          if (this.activeBays.size === 0) {
+            cb.checked = true;
+            this.activeBays.add(bayId);
+            return;
+          }
+          this.render('nothing');
+        });
+      });
+
+      // ── Week date range display ──
+      if (this.daysData.length > 0 && document.getElementById('bd-week-range')) {
+        const first = this.daysData[0].date;
+        const last = this.daysData[this.daysData.length - 1].date;
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const rangeStr = `${first.getDate()} – ${last.getDate()} ${months[last.getMonth()]} ${last.getFullYear()}`;
+        document.getElementById('bd-week-range').innerText = rangeStr;
+      }
+
+      // ── Sidebar: Today's summary ──
+      const sidebarEl = document.getElementById('bd-sidebar');
+      if (sidebarEl) {
+        const todayStr = this.formatDate(new Date());
+        const todayBookings = this.data.filter(r => {
+          const bd = String(r.booking_date || '');
+          return (bd.includes('T') ? bd.split('T')[0] : bd) === todayStr;
+        });
+        const bookedCount = todayBookings.filter(r => r.status_booking_made === 1 && r.status_vehicle_arrived_on_site !== 1 && r.status_work_on_vehicle_in_progress !== 1 && r.status_work_completed !== 1).length;
+        const waitingCount = todayBookings.filter(r => r.status_vehicle_arrived_on_site === 1 && r.status_work_on_vehicle_in_progress !== 1 && r.status_work_completed !== 1).length;
+        const inProgressCount = todayBookings.filter(r => r.status_work_on_vehicle_in_progress === 1 && r.status_work_completed !== 1).length;
+        const completedCount = todayBookings.filter(r => r.status_work_completed === 1).length;
+        const totalSlots = this.baysData.length * Math.floor(this.operatingDuration / 30);
+        const availableCount = Math.max(0, totalSlots - todayBookings.length);
+
+        // Upcoming: next 5 bookings from today onwards, sorted by date+time
+        const upcoming = this.data
+          .filter(r => {
+            const bd = String(r.booking_date || '');
+            const d = bd.includes('T') ? bd.split('T')[0] : bd;
+            return d >= todayStr && r.status_work_completed !== 1;
+          })
+          .sort((a, b) => {
+            const da = String(a.booking_date || '').split('T')[0] + (a.time_start || '');
+            const db = String(b.booking_date || '').split('T')[0] + (b.time_start || '');
+            return da.localeCompare(db);
+          })
+          .slice(0, 5);
+
+        let upcomingHtml = '';
+        upcoming.forEach(r => {
+          const bd = String(r.booking_date || '');
+          const d = bd.includes('T') ? bd.split('T')[0] : bd;
+          upcomingHtml += `<div class="bd-upcoming-item">
+            <div class="bd-upcoming-time">${r.time_start || ''}</div>
+            <div class="bd-upcoming-detail">
+              <strong>${r.vehicle_reg || '—'}</strong>
+              <span>${(r.customer_first_name || '') + ' ' + (r.customer_last_name || '')}</span>
+            </div>
+            <div class="bd-upcoming-date">${d === todayStr ? 'Today' : d}</div>
+          </div>`;
+        });
+
+        sidebarEl.innerHTML = `
+          <div class="bd-sidebar-section">
+            <h4><i class="bi bi-bar-chart"></i> Today's Summary</h4>
+            <div class="bd-summary-grid">
+              <div class="bd-summary-item bd-summary-booked"><span class="bd-summary-count">${bookedCount}</span><span class="bd-summary-label">Booked</span></div>
+              <div class="bd-summary-item bd-summary-waiting"><span class="bd-summary-count">${waitingCount}</span><span class="bd-summary-label">Waiting</span></div>
+              <div class="bd-summary-item bd-summary-progress"><span class="bd-summary-count">${inProgressCount}</span><span class="bd-summary-label">In Progress</span></div>
+              <div class="bd-summary-item bd-summary-completed"><span class="bd-summary-count">${completedCount}</span><span class="bd-summary-label">Completed</span></div>
+              <div class="bd-summary-item bd-summary-available"><span class="bd-summary-count">${availableCount}</span><span class="bd-summary-label">Available</span></div>
+            </div>
+          </div>
+          <div class="bd-sidebar-section">
+            <h4><i class="bi bi-sticky"></i> Notes</h4>
+            <textarea class="bd-notes-textarea" placeholder="Add notes for today..." rows="4"></textarea>
+          </div>
+          <div class="bd-sidebar-section">
+            <h4><i class="bi bi-clock-history"></i> Upcoming</h4>
+            ${upcomingHtml || '<p class="bd-upcoming-empty">No upcoming bookings</p>'}
+          </div>`;
       }
     }
       else if (this.type === 'defectReports') {
@@ -2027,10 +2135,10 @@ addMinutesToTime(startTime, minutesToAdd) {
   // }
  getRandomHex( workCompleted,vehicleInProgress,vehicleArrived,bookingMade) {
    const statusColorMap = {
-  status_booking_made: '#759AF7',                   // Stronger Lavender
-  status_vehicle_arrived_on_site: '#E4ADFB',        // Hot Pink
-  status_work_on_vehicle_in_progress: '#F5E77F',    // Bright Yellow
-  status_work_completed: '#C4EAA2'                  // Brighter Mint Green
+  status_booking_made: '#4A90D9',                   // Blue (Booked)
+  status_vehicle_arrived_on_site: '#F5A623',        // Orange (Waiting)
+  status_work_on_vehicle_in_progress: '#E85D3A',    // Red-Orange (In Progress)
+  status_work_completed: '#5CB85C'                  // Green (Completed)
   };
   if (workCompleted === 1) {
     return statusColorMap.status_work_completed
@@ -2080,6 +2188,7 @@ addMinutesToTime(startTime, minutesToAdd) {
     const bay = allBays.find(b => parseInt(b.getAttribute('data-bay-id')) === parseInt(bayId))
       || allBays.find(b => b.querySelector(".bay-header").innerText.trim() === (bayName || '').trim());
     if (!bay) {
+        if (!this.activeBays.has(parseInt(bayId))) return; // Bay is hidden via visibility filter
         console.error("[createEvent FAIL] bay not found! bayId:", bayId, "| bayName:", JSON.stringify(bayName), "| available:", bayHeaders, "| available IDs:", allBays.map(b => b.getAttribute('data-bay-id')), "| id:", id, text);
         return;
     }
@@ -2105,22 +2214,30 @@ addMinutesToTime(startTime, minutesToAdd) {
     eventElem.dataset.start = startMinute;
     eventElem.dataset.recordId = id;
     eventElem.dataset.id = id;
-    eventElem.style.backgroundColor = this.getRandomHex(workCompleted, vehicleInProgress, vehicleArrived, bookingMade);
-    eventElem.style.color = '#1a1a2e';
+    const eventColor = this.getRandomHex(workCompleted, vehicleInProgress, vehicleArrived, bookingMade);
+    eventElem.style.backgroundColor = '#fff';
+    eventElem.style.color = '#1a2a3a';
     eventElem.style.overflow = 'hidden';
     eventElem.style.cursor = 'pointer';
-    eventElem.style.borderLeft = '3px solid rgba(0,0,0,0.2)';
-    eventElem.style.padding = '2px 4px';
-    eventElem.style.lineHeight = '1.2';
+    eventElem.style.borderLeft = `4px solid ${eventColor}`;
+    eventElem.style.padding = '4px 6px';
+    eventElem.style.lineHeight = '1.3';
     eventElem.style.boxSizing = 'border-box';
+    eventElem.style.boxShadow = '0 1px 4px rgba(0,0,0,0.1)';
 
-    // Rich inner HTML — show time, reg, customer name depending on available height
-    if (minHeight >= 50) {
-      eventElem.innerHTML = `<div style="font-size:10px;font-weight:600;opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${timeLabel}</div><div style="font-size:12px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text || ''}</div><div style="font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${customerName || ''}</div>`;
-    } else if (minHeight >= 35) {
-      eventElem.innerHTML = `<div style="font-size:11px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text || ''}</div><div style="font-size:9px;opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${timeLabel}</div>`;
+    // Status badge color mapping
+    const badgeColors = { 'Booked': '#4A90D9', 'On Site': '#F5A623', 'In Progress': '#E85D3A', 'Complete': '#5CB85C' };
+    const badgeColor = badgeColors[statusLabel] || '#4A90D9';
+
+    // Rich inner HTML — show time badge, reg, customer name, status depending on available height
+    if (minHeight >= 60) {
+      eventElem.innerHTML = `<div class="bd-card-time">${this.formatTime(startMinute)}</div><div class="bd-card-vrm">${text || ''}</div><div class="bd-card-customer">${customerName || ''}</div><div class="bd-card-badge" style="background:${badgeColor};">${statusLabel}</div>`;
+    } else if (minHeight >= 40) {
+      eventElem.innerHTML = `<div class="bd-card-vrm">${text || ''}</div><div class="bd-card-customer">${customerName || ''}</div><div class="bd-card-badge" style="background:${badgeColor};">${statusLabel}</div>`;
+    } else if (minHeight >= 30) {
+      eventElem.innerHTML = `<div class="bd-card-vrm">${text || ''}</div><div class="bd-card-badge" style="background:${badgeColor};">${statusLabel}</div>`;
     } else {
-      eventElem.innerHTML = `<div style="font-size:10px;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${text || ''}</div>`;
+      eventElem.innerHTML = `<div class="bd-card-vrm" style="font-size:10px;">${text || ''}</div>`;
     }
 
     // Enable drag-and-drop
@@ -2130,7 +2247,7 @@ addMinutesToTime(startTime, minutesToAdd) {
     // Rich tooltip with full booking details
     const tooltip = document.createElement("div");
     tooltip.className = "tooltip";
-    tooltip.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:6px;">${statusIcon} ${text || 'No Reg'} <span style="font-weight:400;font-size:11px;opacity:0.7;">— ${statusLabel}</span></div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12px;"><span style="opacity:0.6;">Time</span><span>${this.formatTime(startMinute)} – ${this.formatTime(startMinute + duration)}</span><span style="opacity:0.6;">Duration</span><span>${duration} mins</span><span style="opacity:0.6;">Bay</span><span>${bayName || '—'}</span><span style="opacity:0.6;">Date</span><span>${eventDate}</span>${customerName ? `<span style="opacity:0.6;">Customer</span><span>${customerName}</span>` : ''}${notes ? `<span style="opacity:0.6;">Notes</span><span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${notes}</span>` : ''}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-primary data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record" data-id="${id}" style="font-size:11px;padding:4px 10px;border-radius:4px;">Open</button><a class="data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record-duplicate" data-id="${id}" style="font-size:11px;padding:4px 10px;border-radius:4px;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;text-decoration:none;">Duplicate</a><i class="bi bi-trash data-launch-subgrid-delete-garage-booking-item-bay-grid-view bay-grid-view-delete-button" data-id="${id}" style="font-size:14px;padding:4px;cursor:pointer;opacity:0.7;"></i></div>`;
+    tooltip.innerHTML = `<div style="font-weight:700;font-size:14px;margin-bottom:6px;border-bottom:1px solid #e8edf2;padding-bottom:6px;">${statusIcon} ${text || 'No Reg'} <span style="font-weight:400;font-size:11px;color:#7f8c9b;">— ${statusLabel}</span></div><div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12px;"><span style="color:#7f8c9b;">Time</span><span>${this.formatTime(startMinute)} – ${this.formatTime(startMinute + duration)}</span><span style="color:#7f8c9b;">Duration</span><span>${duration} mins</span><span style="color:#7f8c9b;">Bay</span><span>${bayName || '—'}</span><span style="color:#7f8c9b;">Date</span><span>${eventDate}</span>${customerName ? `<span style="color:#7f8c9b;">Customer</span><span>${customerName}</span>` : ''}${notes ? `<span style="color:#7f8c9b;">Notes</span><span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${notes}</span>` : ''}</div><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;"><button class="btn btn-primary data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record" data-id="${id}" style="font-size:11px;padding:4px 10px;border-radius:4px;">Open</button><a class="data-launch-garage-bookings-grid-view-tooltip-open-booking-btn data-launch-table-clickable-garage-booking-record-duplicate" data-id="${id}" style="font-size:11px;padding:4px 10px;border-radius:4px;background:#f5f7fa;color:#1a2a3a;cursor:pointer;text-decoration:none;">Duplicate</a><i class="bi bi-trash data-launch-subgrid-delete-garage-booking-item-bay-grid-view bay-grid-view-delete-button" data-id="${id}" style="font-size:14px;padding:4px;cursor:pointer;color:#e74c3c;opacity:0.8;"></i></div>`;
     tooltip.style.position = "absolute";
     tooltip.style.left = "0";
     tooltip.style.bottom = "100%";

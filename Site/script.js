@@ -6,7 +6,9 @@ let class_invoked_testers = false;
 let class_invoked_motReconciliation = false;
 let class_invoked_specialNotices = false;
 let class_invoked_aeLogins = false;
+let class_invoked_internalAuditReport = false;
 let aeLoginsClassInstantiated;
+let internalAuditReportClassInstantiated;
 let testingStationData = null;
 let garageClassInstantiated;
 let testingStationClassInstantiated;
@@ -255,6 +257,14 @@ function changePage(event, id, urlRedirectToPage) {
       }
     }
 
+
+    else if (desiredPage === 'internalAuditReport') {
+      label = 'Internal Audit'
+      if (class_invoked_internalAuditReport === false) {
+        class_invoked_internalAuditReport = true
+        internalAuditReportClassInstantiated = new InternalAuditReport();
+      }
+    }
 
     else if (desiredPage === 'motReconciliations') {
       if (class_invoked_motReconciliation === false) {

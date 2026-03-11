@@ -19,6 +19,8 @@
     <!--  -->
     
     <link rel="stylesheet" href="./qcCheckWizard.css">
+    <link rel="stylesheet" href="./addGarageWizard.css">
+    <link rel="stylesheet" href="./internalAuditReport.css">
     <link rel="stylesheet" href="./styles.css">
     <link rel="stylesheet" href="./mobile.css" media="(max-width: 1024px)">
 
@@ -94,6 +96,12 @@
                 <span class="ms-1 d-sm-inline data-launch-change-page data-launch-nav-menu-item-span modern-menu-text" data-launch-menu-item="aeLogins" onclick="changePage(event)">AE Logins</span>
             </a>
           </li>
+          <li class="data-launch-side-bar-li modern-menu-item">
+            <a href="#" class="nav-link text-truncate data-launch-change-page data-launch-nav-menu-item-a modern-menu-link" data-launch-menu-item="internalAuditReport" onclick="changePage(event)">
+                <i class="bi bi-graph-up-arrow data-launch-change-page modern-icon" data-launch-menu-item="internalAuditReport" onclick="changePage(event)"></i>
+                <span class="ms-1 d-sm-inline data-launch-change-page data-launch-nav-menu-item-span modern-menu-text" data-launch-menu-item="internalAuditReport" onclick="changePage(event)">Internal Audit</span>
+            </a>
+          </li>
           <!-- <li class="data-launch-side-bar-li modern-menu-item">
               <a href="#" class="nav-link text-truncate data-launch-change-page data-launch-nav-menu-item-a modern-menu-link" data-launch-menu-item="motReconciliations" onclick="changePage(event)">
                   <i class="bi bi-table data-launch-change-page modern-icon" data-launch-menu-item="motReconciliations" onclick="changePage(event)"></i>
@@ -154,6 +162,16 @@
                 </div>
               </div>
           
+              <!-- Internal Audit -->
+              <div class="col-6 col-md-4 col-lg-3 data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="internalAuditReport">
+                <div class="card text-center h-100 shadow-sm data-launch-nav-card data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="internalAuditReport">
+                  <div class="card-body data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="internalAuditReport">
+                    <i class="bi bi-graph-up-arrow display-5 mb-2 text-primary data-launch-home-page-card-icons-i-el data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="internalAuditReport"></i>
+                    <h2 class="card-title mb-0 data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="internalAuditReport">Internal Audit</h2>
+                  </div>
+                </div>
+              </div>
+
               <!-- Special Notices -->
               <div class="col-6 col-md-4 col-lg-3 data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="specialNotices">
                 <div class="card text-center h-100 shadow-sm data-launch-nav-card data-launch-change-page" onclick="changePage(event)" data-launch-menu-item="specialNotices">
@@ -179,6 +197,7 @@
     <div class="container-fluid data-launch-main-screen data-launch-hide" data-launch-page="TQI Import for Car"></div>
     <div class="container-fluid data-launch-main-screen data-launch-hide" data-launch-page="TQI Import for Motorcycles"></div>
     <div class="container-fluid data-launch-main-screen data-launch-hide" id="specialNoticesPage" data-launch-page="specialNotices"></div>
+    <div class="container-fluid data-launch-main-screen data-launch-hide" id="internalAuditReportPage" data-launch-page="internalAuditReport"></div>
     <div class="container-fluid data-launch-main-screen data-launch-hide" id="aeLoginsPage" data-launch-page="aeLogins">
        <div style="padding: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
         <div style="font-size: 4em; color: #FF9800; margin-bottom: 20px;">🚧</div>
@@ -212,12 +231,14 @@
     <script src="./testingStation.js"></script>
     <script src="./qcCheckWizard.js"></script>
     <script src="./siteAuditWizard.js"></script>
+    <script src="./addGarageWizard.js"></script>
     <script src="./garages.js"></script>
     <script src="./testers.js"></script>
     <script src="./globalOptionSets.js"></script>
     <script src="./motReconciliation.js"></script>
     <script src="./specialNotices.js"></script>
-    <script src="./aeLogins.js"></script>   
+    <script src="./aeLogins.js"></script>
+    <script src="./internalAuditReport.js"></script>
     <script src="./script.js"></script>
 
     </body>
