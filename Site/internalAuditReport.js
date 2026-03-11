@@ -135,9 +135,8 @@ class InternalAuditReport {
       return `<div class="iar-empty"><i class="bi bi-people"></i><p>No consultant data found.</p></div>`;
     }
 
-    // Build summary rows
-    let rows = '';
-    consultants.forEach(name => {
+    // Build consultant summary data for sorting and alerts
+    const summaries = consultants.map(name => {
       const cd = this._getConsultantData(name);
       const auditCount = cd.audits.length;
       const qcCount = cd.qcChecks.length;
@@ -148,7 +147,6 @@ class InternalAuditReport {
         ? Math.round(cd.qcChecks.reduce((s, q) => s + (parseFloat(q.score_percentage) || 0), 0) / qcCount)
         : null;
 
-      // Last activity
       const allDates = [
         ...cd.audits.map(a => a.date),
         ...cd.qcChecks.map(q => q.date_of_qc)
@@ -156,34 +154,76 @@ class InternalAuditReport {
       const lastActivity = allDates[0] || null;
       const daysSince = this._daysSince(lastActivity);
 
-      // Revenue estimate
+      // Count overdue garages (no audit in 90+ days)
+      const overdueGarages = cd.garages.filter(g => {
+        const garageAudits = cd.audits.filter(a => a.garage_id === g.id);
+        if (garageAudits.length === 0) return true;
+        const latest = garageAudits.map(a => a.date).filter(Boolean).sort().reverse()[0];
+        return this._daysSince(latest) > 90;
+      });
+
       const totalCharge = cd.garages.reduce((s, g) => s + (parseFloat(g.charge_rate_garage) || 0), 0);
 
+      return { name, cd, auditCount, qcCount, avgAuditScore, avgQcScore, lastActivity, daysSince, overdueGarages, totalCharge };
+    });
+
+    // ── Priority Alerts: consultants with overdue garages ──
+    const alertConsultants = summaries
+      .filter(s => s.overdueGarages.length > 0)
+      .sort((a, b) => b.overdueGarages.length - a.overdueGarages.length);
+
+    let alertsHtml = '';
+    if (alertConsultants.length > 0) {
+      let cards = '';
+      alertConsultants.forEach(s => {
+        const isRed = s.overdueGarages.length >= 5;
+        cards += `
+          <div class="iar-alert-card ${isRed ? '' : 'iar-alert-card-amber'}" data-consultant="${s.name}">
+            <div class="iar-alert-card-name">${s.name}</div>
+            <div class="iar-alert-card-stats">
+              <div class="iar-alert-stat"><strong>${s.overdueGarages.length}</strong> overdue garages</div>
+              <div class="iar-alert-stat">${s.cd.garages.length} total</div>
+              <div class="iar-alert-stat">${s.daysSince !== null ? s.daysSince + 'd since last activity' : 'No activity recorded'}</div>
+            </div>
+          </div>`;
+      });
+      alertsHtml = `
+        <div class="iar-alerts">
+          <h3><i class="bi bi-exclamation-triangle-fill"></i> Priority Alerts — ${alertConsultants.length} Consultant${alertConsultants.length > 1 ? 's' : ''} With Overdue Garages</h3>
+          <div class="iar-alert-cards">${cards}</div>
+        </div>`;
+    }
+
+    // ── Summary table ──
+    let rows = '';
+    summaries.forEach(s => {
       rows += `
-        <tr style="cursor: pointer;" data-consultant="${name}">
-          <td><strong>${name}</strong></td>
-          <td>${cd.garages.length}</td>
-          <td>${auditCount}</td>
-          <td>${this._scoreBadge(avgAuditScore)}</td>
-          <td>${qcCount}</td>
-          <td>${this._scoreBadge(avgQcScore)}</td>
-          <td>${this._flagForDays(daysSince)}</td>
-          <td>${totalCharge ? '£' + totalCharge.toFixed(0) : '—'}</td>
+        <tr style="cursor: pointer;" data-consultant="${s.name}">
+          <td><strong>${s.name}</strong></td>
+          <td>${s.cd.garages.length}</td>
+          <td>${s.overdueGarages.length > 0 ? '<span class="iar-flag iar-flag-red">' + s.overdueGarages.length + '</span>' : '<span class="iar-flag iar-flag-green">0</span>'}</td>
+          <td>${s.auditCount}</td>
+          <td>${s.auditCount > 0 ? this._scoreBadge(s.avgAuditScore) : '<span style="color:#9ca3af;font-size:12px;">No audits</span>'}</td>
+          <td>${s.qcCount}</td>
+          <td>${s.qcCount > 0 ? this._scoreBadge(s.avgQcScore) : '<span style="color:#9ca3af;font-size:12px;">No QC</span>'}</td>
+          <td>${this._flagForDays(s.daysSince)}</td>
+          <td>${s.totalCharge ? '£' + s.totalCharge.toFixed(0) : '—'}</td>
         </tr>`;
     });
 
-    const html = `
+    const html = alertsHtml + `
       <div class="iar-section">
-        <h3><i class="bi bi-people"></i> Consultant Overview</h3>
+        <h3><i class="bi bi-people"></i> All Consultants</h3>
         <table class="iar-table">
           <thead>
             <tr>
               <th>Consultant</th>
               <th>Garages</th>
-              <th>Audits</th>
-              <th>Avg Audit Score</th>
+              <th>Overdue</th>
+              <th>Site Audits</th>
+              <th>Avg Audit %</th>
               <th>QC Checks</th>
-              <th>Avg QC Score</th>
+              <th>Avg QC %</th>
               <th>Last Activity</th>
               <th>Est. Revenue</th>
             </tr>
@@ -192,11 +232,11 @@ class InternalAuditReport {
         </table>
       </div>`;
 
-    // Bind row clicks after render
+    // Bind clicks after render (both alert cards and table rows)
     setTimeout(() => {
-      document.querySelectorAll('#iar-content tr[data-consultant]').forEach(row => {
-        row.addEventListener('click', () => {
-          this.selectedConsultant = row.dataset.consultant;
+      document.querySelectorAll('#iar-content [data-consultant]').forEach(el => {
+        el.addEventListener('click', () => {
+          this.selectedConsultant = el.dataset.consultant;
           document.getElementById('iar-consultant-select').value = this.selectedConsultant;
           this._renderContent();
         });

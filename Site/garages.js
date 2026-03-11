@@ -73,13 +73,17 @@ class Garage {
                                         </div>
                                         </div>
                                     </div>
-        <div class="container" style="display: flex; gap: 10px; align-items: center; padding-top: 8px; padding-bottom: 8px;">
-            <input style="flex: 1;" type="text" class="data-launch-garage-global-filter-input" id="data-launch-garage-global-filter-input" placeholder="Search">
-            <select class="data-launch-filter-search" data-launch-header="consultant_name_garage" id="data-launch-consultant-filter" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 180px;">
-                <option value="">All Consultants</option>
-                ${consultantOptions}
-            </select>
-            <i class="bi bi-arrow-counterclockwise data-launch-reset-filters-icon data-launch-table-reset-all-garage-filters" style="cursor: pointer;"></i>
+        <div class="glv-toolbar">
+            <div class="glv-toolbar-left">
+                <select class="glv-consultant-select data-launch-filter-search" data-launch-header="consultant_name_garage" id="data-launch-consultant-filter">
+                    <option value="">All Consultants</option>
+                    ${consultantOptions}
+                </select>
+                <button class="glv-reset-btn data-launch-reset-filters-icon data-launch-table-reset-all-garage-filters" title="Reset filters"><i class="bi bi-arrow-counterclockwise"></i></button>
+            </div>
+            <div class="glv-toolbar-right">
+                <button class="glv-add-btn data-launch-table-garages-new-record"><i class="bi bi-plus-circle"></i> Add Garage</button>
+            </div>
         </div>
         <!-- Page wrapper/Container Section -->
         <div class="container" style="height: 92vh; overflow-y: auto;">
@@ -88,18 +92,16 @@ class Garage {
                 <!-- Responsive Table Header Section -->
                 <thead class="responsive-table__head" style="position: sticky; top: 0; z-index: 1;">
                     <tr class="responsive-table__row data-launch-garage-list-view-row">
-                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">VTS</th>
-                        <th style="width: 300px;" class="responsive-table__head__title responsive-table__head__title--status" scope="col">Trading Name</th>
-                        <th class="responsive-table__head__title responsive-table__head__title--name"   scope="col">First</th>
-                        <th class="responsive-table__head__title responsive-table__head__title--name"   scope="col">Last</th>                        
-                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Postcode</th>
-                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Phone</th>
-                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Consultant</th>
-                        <th></th>
-                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col"></th>
-                        <th class="responsive-table__head__title responsive-table__head__title--status" scope="col">Archive?                          
-                          <i class="bi bi-filetype-xls data-launch-export-icon data-launch-export-records"></i>                                        
-                        </th>                        
+                        <th class="responsive-table__head__title" scope="col" style="width:70px;">VTS</th>
+                        <th class="responsive-table__head__title" scope="col" style="width:25%;">Trading Name</th>
+                        <th class="responsive-table__head__title" scope="col">First</th>
+                        <th class="responsive-table__head__title" scope="col">Last</th>
+                        <th class="responsive-table__head__title" scope="col" style="width:80px;">Postcode</th>
+                        <th class="responsive-table__head__title" scope="col">Phone</th>
+                        <th class="responsive-table__head__title" scope="col">Consultant</th>
+                        <th class="responsive-table__head__title" scope="col" style="width:70px;text-align:center;">
+                          <i class="bi bi-filetype-xls data-launch-export-icon data-launch-export-records" title="Export" style="cursor:pointer;"></i>
+                        </th>
                     </tr>
                 </thead>
                 <!-- Responsive Table Body Section -->
@@ -138,16 +140,14 @@ class Garage {
         for (let i = 0; i < data.length; i++) {
             html += `
             <tr id="data-launch-garage-table-list-view-row-${data[i].id}" class="responsive-table__row data-launch-garage-list-view-row  export-row" data-export-row="${exportRow}"  data-export-header="VTS Site No"  data-export-val="${data[i].vtsSiteNo_garage}" data-vts-pro-id=${data[i].id}>
-                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="VTS ID"         data-export-val="${data[i].id}" scope="row">${typeof data[i].id === 'undefined' ? '': data[i].id}</td>
-                <td style="width: 300px;" class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Company Name"   data-export-val="${data[i].trading_name_garage}" scope="row">${typeof data[i].trading_name_garage === 'undefined' ? '': data[i].trading_name_garage}</td>    
-                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="First Name"      data-export-val="${data[i].contact_forename_garage}" scope="row">${typeof data[i].contact_forename_garage === 'undefined' ? '': data[i].contact_forename_garage}</td>
-                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Last Name"       data-export-val="${data[i].contact_surname_garage}" scope="row">${typeof data[i].contact_surname_garage === 'undefined' ? '': data[i].contact_surname_garage}</td>
-                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Postcode"       data-export-val="${data[i].vts_postcode_garage}" scope="row">${typeof data[i].vts_postcode_garage === 'undefined' ? '': data[i].vts_postcode_garage}</td>
-                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Phone"   data-export-val="${data[i].contact_main_number_garage}" scope="row">${typeof data[i].contact_main_number_garage === 'undefined' ? '': data[i].contact_main_number_garage}</td>
-                <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Consultant" data-export-val="${data[i].consultant_name_garage || ''}" scope="row">${data[i].consultant_name_garage || ''}</td>
-                <td></td>
-                <td></td>
-                <td><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}'></i></td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="VTS ID" data-export-val="${data[i].vts_site_number_garage || data[i].id}" scope="row">${data[i].vts_site_number_garage || data[i].id}</td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Company Name" data-export-val="${data[i].trading_name_garage}" scope="row">${data[i].trading_name_garage || ''}</td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="First Name" data-export-val="${data[i].contact_forename_garage}" scope="row">${data[i].contact_forename_garage || ''}</td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Last Name" data-export-val="${data[i].contact_surname_garage}" scope="row">${data[i].contact_surname_garage || ''}</td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Postcode" data-export-val="${data[i].vts_postcode_garage}" scope="row">${data[i].vts_postcode_garage || ''}</td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Phone" data-export-val="${data[i].contact_main_number_garage}" scope="row">${data[i].contact_main_number_garage || ''}</td>
+                <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Consultant" data-export-val="${data[i].consultant_name_garage || ''}" scope="row">${data[i].consultant_name_garage || ''}</td>
+                <td style="text-align:center;"><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}' title="Archive"></i></td>
             </tr>`
             exportRow++           
         }
@@ -177,16 +177,14 @@ class Garage {
             for (let i = 0; i < data.length; i++) {
                 html += `
                 <tr id="data-launch-garage-table-list-view-row-${data[i].id}" class="responsive-table__row data-launch-garage-list-view-row  export-row" data-export-row="${exportRow}" data-export-header="VTS Site No"                 data-export-val="${data[i].vtsSiteNo_garage}" data-vts-pro-id=${data[i].id}>
-                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="VTS ID"                data-export-val="${data[i].id}" scope="row">${typeof data[i].id === 'undefined' ? '': data[i].id}</td>
-                    <td style="width: 300px;" class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Company Name"          data-export-val="${data[i].trading_name_garage}" scope="row">${typeof data[i].trading_name_garage === 'undefined' ? '': data[i].trading_name_garage}</td>
-                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="First Name"                data-export-val="${data[i].contact_forename_garage}" scope="row">${typeof data[i].contact_forename_garage === 'undefined' ? '': data[i].contact_forename_garage}</td>
-                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Last Name"                data-export-val="${data[i].contact_surname_garage}" scope="row">${typeof data[i].contact_surname_garage === 'undefined' ? '': data[i].contact_surname_garage}</td>
-                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Postcode"                data-export-val="${data[i].vts_postcode_garage}" scope="row">${typeof data[i].vts_postcode_garage === 'undefined' ? '': data[i].vts_postcode_garage}</td>
-                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Phone"          data-export-val="${data[i].contact_main_number_garage}" scope="row">${typeof data[i].contact_main_number_garage === 'undefined' ? '': data[i].contact_main_number_garage}</td>
-                    <td class="responsive-table__body__text responsive-table__body__text--types export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Consultant" data-export-val="${data[i].consultant_name_garage || ''}" scope="row">${data[i].consultant_name_garage || ''}</td>
-                    <td></td>
-                    <td></td>
-                    <td><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}'></i></td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="VTS ID" data-export-val="${data[i].vts_site_number_garage || data[i].id}" scope="row">${data[i].vts_site_number_garage || data[i].id}</td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Company Name" data-export-val="${data[i].trading_name_garage}" scope="row">${data[i].trading_name_garage || ''}</td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="First Name" data-export-val="${data[i].contact_forename_garage}" scope="row">${data[i].contact_forename_garage || ''}</td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Last Name" data-export-val="${data[i].contact_surname_garage}" scope="row">${data[i].contact_surname_garage || ''}</td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Postcode" data-export-val="${data[i].vts_postcode_garage}" scope="row">${data[i].vts_postcode_garage || ''}</td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Phone" data-export-val="${data[i].contact_main_number_garage}" scope="row">${data[i].contact_main_number_garage || ''}</td>
+                    <td class="responsive-table__body__text export-record data-launch-garage-list-view-record-click" data-export-row="${exportRow}" data-export-header="Consultant" data-export-val="${data[i].consultant_name_garage || ''}" scope="row">${data[i].consultant_name_garage || ''}</td>
+                    <td style="text-align:center;"><i class="bi bi-archive data-launch-garage-archive-garage-record" data-id='${data[i].id}' title="Archive"></i></td>
                 </tr>`
                 exportRow++           
             }
@@ -2496,7 +2494,8 @@ class Garage {
         for (let i = 0; i < tr.length; i++) {
             tr[i].style.display = 'grid'
         }
-        document.getElementById('data-launch-garage-global-filter-input').value = ''
+        let globalFilterInput = document.getElementById('data-launch-garage-global-filter-input');
+        if (globalFilterInput) globalFilterInput.value = ''
         let consultantFilter = document.getElementById('data-launch-consultant-filter')
         if (consultantFilter) consultantFilter.value = ''
         // this.filteredData = []

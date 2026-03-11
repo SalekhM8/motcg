@@ -4238,6 +4238,79 @@ input[type="phone"], input[type="email"] {
 /* END OF THE GARAGE BOOKINGS CALENDAR VIEW */
 
 /* ================================================================
+   GARAGE LIST VIEW — Restyled toolbar
+   ================================================================ */
+.glv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.glv-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.glv-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.glv-consultant-select {
+  padding: 8px 14px;
+  border: 1.5px solid #d5dce4;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 220px;
+  background: #fff;
+  color: #1a2a3a;
+  outline: none;
+  cursor: pointer;
+}
+.glv-consultant-select:focus {
+  border-color: #0068B5;
+  box-shadow: 0 0 0 3px rgba(0,104,181,0.12);
+}
+.glv-reset-btn {
+  background: #f5f7fa;
+  border: 1.5px solid #d5dce4;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 16px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+}
+.glv-reset-btn:hover {
+  background: #e8edf2;
+  color: #1a2a3a;
+}
+.glv-add-btn {
+  background: #0068B5;
+  border: none;
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0,104,181,0.25);
+}
+.glv-add-btn:hover {
+  background: #005a9e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,104,181,0.35);
+}
+
+/* ================================================================
    BOOKING DIARY V2 — Redesigned bay grid
    ================================================================ */
 
