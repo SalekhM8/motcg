@@ -4309,6 +4309,10 @@ input[type="phone"], input[type="email"] {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(0,104,181,0.35);
 }
+.glv-th {
+  font-size: 12px !important;
+  white-space: nowrap;
+}
 
 /* ================================================================
    BOOKING DIARY V2 — Redesigned bay grid

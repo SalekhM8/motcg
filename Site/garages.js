@@ -79,7 +79,6 @@ class Garage {
                     <option value="">All Consultants</option>
                     ${consultantOptions}
                 </select>
-                <button class="glv-reset-btn data-launch-reset-filters-icon data-launch-table-reset-all-garage-filters" title="Reset filters"><i class="bi bi-arrow-counterclockwise"></i></button>
             </div>
             <div class="glv-toolbar-right">
                 <button class="glv-add-btn data-launch-table-garages-new-record"><i class="bi bi-plus-circle"></i> Add Garage</button>
@@ -92,16 +91,14 @@ class Garage {
                 <!-- Responsive Table Header Section -->
                 <thead class="responsive-table__head" style="position: sticky; top: 0; z-index: 1;">
                     <tr class="responsive-table__row data-launch-garage-list-view-row">
-                        <th class="responsive-table__head__title" scope="col" style="width:70px;">VTS</th>
-                        <th class="responsive-table__head__title" scope="col" style="width:25%;">Trading Name</th>
-                        <th class="responsive-table__head__title" scope="col">First</th>
-                        <th class="responsive-table__head__title" scope="col">Last</th>
-                        <th class="responsive-table__head__title" scope="col" style="width:80px;">Postcode</th>
-                        <th class="responsive-table__head__title" scope="col">Phone</th>
-                        <th class="responsive-table__head__title" scope="col">Consultant</th>
-                        <th class="responsive-table__head__title" scope="col" style="width:70px;text-align:center;">
-                          <i class="bi bi-filetype-xls data-launch-export-icon data-launch-export-records" title="Export" style="cursor:pointer;"></i>
-                        </th>
+                        <th class="responsive-table__head__title glv-th" scope="col" style="width:70px;">VTS</th>
+                        <th class="responsive-table__head__title glv-th" scope="col">Trading Name</th>
+                        <th class="responsive-table__head__title glv-th" scope="col">First</th>
+                        <th class="responsive-table__head__title glv-th" scope="col">Last</th>
+                        <th class="responsive-table__head__title glv-th" scope="col">Postcode</th>
+                        <th class="responsive-table__head__title glv-th" scope="col">Phone</th>
+                        <th class="responsive-table__head__title glv-th" scope="col">Consultant</th>
+                        <th class="responsive-table__head__title glv-th" scope="col" style="width:80px;text-align:center;">Archive <i class="bi bi-filetype-xls data-launch-export-icon data-launch-export-records" title="Export" style="cursor:pointer;margin-left:4px;"></i></th>
                     </tr>
                 </thead>
                 <!-- Responsive Table Body Section -->
