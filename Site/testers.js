@@ -1592,7 +1592,7 @@ class Testers {
                                 html += ` <div class='data-launch-input-field-container'>
                                             <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
                                             <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='email' value="${rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${rec[fieldDataObj[key].fields[t].field]}" class='data-launch-input-field data-launch-field-editable'>
-                                            <a style='position: relative; top: -34%; left: 95%;' href="mailto:${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}"><i class="bi bi-envelope"></i></a>
+                                            <a style='position: relative; top: -34%; left: 95%;' href="mailto:${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}"><i class="bi bi-envelope"></i></a>
                                         </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'date') {
