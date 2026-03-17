@@ -4019,13 +4019,13 @@ class Garage {
                             if (fieldDataObj[key].fields[t].type === 'text') {
                                 html += `<div class='data-launch-input-field-container'>
                                           <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
-                                          <input id="${fieldDataObj[key].fields[t].field}_val" placeholder="${fieldDataObj[key].fields[t].label}" type='text' data-launch-field="${fieldDataObj[key].fields[t].field}" value="${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}" class='data-launch-input-field data-launch-field-editable' ${fieldDataObj[key].fields[t].disabled ? 'disabled' : ''} data-editable>
+                                          <input id="${fieldDataObj[key].fields[t].field}_val" placeholder="${fieldDataObj[key].fields[t].label}" type='text' data-launch-field="${fieldDataObj[key].fields[t].field}" value="${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}" class='data-launch-input-field data-launch-field-editable' ${fieldDataObj[key].fields[t].disabled ? 'disabled' : ''} data-editable>
                                         </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'child_garage_ids-CUSTOM-DO-NOT-CHANGE') {
                                 html += `<div class='data-launch-input-field-container'>
                                           <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
-                                          <input id="${fieldDataObj[key].fields[t].field}_val" placeholder="${fieldDataObj[key].fields[t].label}" type='text' data-launch-field="${fieldDataObj[key].fields[t].field}" value="${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}" class='data-launch-input-field data-launch-field-editable' ${fieldDataObj[key].fields[t].disabled ? 'disabled' : ''} data-editable>
+                                          <input id="${fieldDataObj[key].fields[t].field}_val" placeholder="${fieldDataObj[key].fields[t].label}" type='text' data-launch-field="${fieldDataObj[key].fields[t].field}" value="${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}" class='data-launch-input-field data-launch-field-editable' ${fieldDataObj[key].fields[t].disabled ? 'disabled' : ''} data-editable>
                                         </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'spacer') {
@@ -4034,26 +4034,26 @@ class Garage {
                             else if (fieldDataObj[key].fields[t].type === 'phone') {
                                 html += `<div class='data-launch-input-field-container'>
                                             <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
-                                            <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='phone' value="${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${fieldDataObj[key].fields[t].field}" class='data-launch-input-field data-launch-field-editable' data-editable>
+                                            <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='phone' value="${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${fieldDataObj[key].fields[t].field}" class='data-launch-input-field data-launch-field-editable' data-editable>
                                         </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'email') {
                                 html += ` <div class='data-launch-input-field-container'>
                                              <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
-                                             <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='email' value="${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${fieldDataObj[key].fields[t].field}" class='data-launch-input-field data-launch-field-editable' data-editable>
-                                            <a style='position: relative; top: -40px; left: 89%;' href="mailto:${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}"><i class="bi bi-envelope"></i></a>
+                                             <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='email' value="${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${fieldDataObj[key].fields[t].field}" class='data-launch-input-field data-launch-field-editable' data-editable>
+                                            <a style='position: relative; top: -40px; left: 89%;' href="mailto:${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}"><i class="bi bi-envelope"></i></a>
                                           </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'date') {
                                 html += ` <div class='data-launch-input-field-container'>
                                              <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
-                                             <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='date' value="${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${fieldDataObj[key].fields[t].field}" class='data-launch-input-field data-launch-field-editable' data-editable>
+                                             <input id="${fieldDataObj[key].fields[t].field}_val" placeholder='${fieldDataObj[key].fields[t].label}' type='date' value="${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field]}" data-launch-field="${fieldDataObj[key].fields[t].field}" class='data-launch-input-field data-launch-field-editable' data-editable>
                                            </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'multi-text') {
                                 html += `<div class='data-launch-input-field-container data-launch-input-field-container-multi-line'>
                                             <label class="data-launch-field-labels">${fieldDataObj[key].fields[t].label}</label>
-                                            <textarea id="${fieldDataObj[key].fields[t].field}_val" class='data-launch-input-field-multi-line data-launch-field-editable' data-launch-field="${fieldDataObj[key].fields[t].field}" data-launch-field-editable">${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' :  rec[fieldDataObj[key].fields[t].field]}</textarea>
+                                            <textarea id="${fieldDataObj[key].fields[t].field}_val" class='data-launch-input-field-multi-line data-launch-field-editable' data-launch-field="${fieldDataObj[key].fields[t].field}" data-launch-field-editable">${rec[fieldDataObj[key].fields[t].field] == null ? '' :  rec[fieldDataObj[key].fields[t].field]}</textarea>
                                         </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'checkbox') {
@@ -4067,7 +4067,7 @@ class Garage {
                                         if (fieldDataObj[key].fields[t].hasOwnProperty("style")) {
                                             html += `style="${fieldDataObj[key].fields[t].style}"`
                                         }                                            
-                                        html +=   ` id="${fieldDataObj[key].fields[t].field}_val" type='checkbox' class='data-launch-input-field-checkbox data-launch-field-editable' data-launch-field="${fieldDataObj[key].fields[t].field}" ${typeof rec[fieldDataObj[key].fields[t].field] === 'undefined' ? '' : rec[fieldDataObj[key].fields[t].field] === 1 ? "checked" : ''}>
+                                        html +=   ` id="${fieldDataObj[key].fields[t].field}_val" type='checkbox' class='data-launch-input-field-checkbox data-launch-field-editable' data-launch-field="${fieldDataObj[key].fields[t].field}" ${rec[fieldDataObj[key].fields[t].field] == null ? '' : rec[fieldDataObj[key].fields[t].field] === 1 ? "checked" : ''}>
                                         </div>`
                             }
                             else if (fieldDataObj[key].fields[t].type === 'record') {
