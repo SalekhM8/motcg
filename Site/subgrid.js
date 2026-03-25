@@ -437,7 +437,13 @@ class SubGrid {
                                <i class="bi bi-plus-circle"></i> Add New Booking Record</button>`
                   }
                   html += `</div>`
-        
+
+        html += `<div style="background-color: #dc3545; color: #fff; padding: 14px 20px; border-radius: 6px; margin: 10px 0; text-align: center; font-family: sans-serif; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                    <strong style="font-size: 17px; display: block; margin-bottom: 6px;">⚠️ IMPORTANT: Platform Migration Notice</strong>
+                    We are migrating to our new platform. Any bookings made on this version of the platform from <strong>Friday 27th March</strong> onwards will <strong>NOT</strong> be transferred to the new platform.<br>
+                    All bookings made before then will carry over. Please plan accordingly.
+                 </div>`
+
         if (this.viewType === 'bayGrid') {
           html += `<div id="garageBookingsCalendarContainer" class="calendar-container">`
         }
