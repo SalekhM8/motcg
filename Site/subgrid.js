@@ -440,8 +440,8 @@ class SubGrid {
 
         html += `<div style="background-color: #c0392b; color: #fff; padding: 14px 20px; border-radius: 6px; margin: 10px 0; text-align: center; font-family: sans-serif; font-size: 15px; line-height: 1.7; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
                     <strong style="font-size: 17px; display: block; margin-bottom: 6px;">IMPORTANT: Platform Update</strong>
-                    We are upgrading the system overnight.<br>
-                    When you next log in on <strong>Friday 27th March 2026</strong>, you will see a new layout and improved features.<br><br>
+                    We are upgrading the system over the next few days.<br>
+                    When you next log in, you may see a new layout and improved features.<br><br>
                     All existing bookings and data will remain unchanged.<br>
                     No action is required.
                  </div>`
